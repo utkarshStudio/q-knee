@@ -16,7 +16,7 @@ This guide provides step-by-step instructions to set up and run the Q-Knee Hybri
 ## 1. Clone & Environment Configuration
 
 ```bash
-git clone https://github.com/your-username/q-knee.git
+git clone https://github.com/utkarshStudio/q-knee.git
 cd q-knee
 
 # Copy environment template

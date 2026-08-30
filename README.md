@@ -105,7 +105,7 @@ Q-Knee introduces an end-to-end **Hybrid Quantum-Classical (HQML)** diagnostic w
 
 ### 1. Clone & Configure
 ```bash
-git clone https://github.com/your-username/q-knee.git
+git clone https://github.com/utkarshStudio/q-knee.git
 cd q-knee
 cp .env.example .env
 ```

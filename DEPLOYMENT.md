@@ -37,7 +37,7 @@ The easiest and most reliable way to run the full production stack is using Dock
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/your-username/q-knee.git
+git clone https://github.com/utkarshStudio/q-knee.git
 cd q-knee
 
 # 2. Configure environment
