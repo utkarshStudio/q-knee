@@ -1,8 +1,8 @@
-﻿import os
+import os
 from pathlib import Path
 
 class Config:
-    ML_PORT: int = int(os.getenv("ML_PORT", "8000"))
+    ML_PORT: int = int(os.getenv("PORT", os.getenv("ML_PORT", "8000")))
     MODEL_DIR: str = os.getenv("MODEL_DIR", str(Path(__file__).parent.parent / "models"))
     RSNA_DATA_DIR: str = os.getenv("RSNA_DATA_DIR", "")
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", str(Path(__file__).parent.parent.parent / "storage" / "uploads"))

@@ -33,20 +33,20 @@ async def lifespan(app: FastAPI):
 
     if not pca_loaded:
         print("  Fitting PCA on DEMO data (4 components)...")
-        X, _ = generate_demo_features(n_samples=40, seed=42)
+        X, _ = generate_demo_features(n_samples=8, seed=42)
         pca_handler.fit_pca(X, n_components=config.PCA_COMPONENTS)
 
     if not svm_loaded:
         print("  Fitting Classical SVM on DEMO data...")
-        X, y = generate_demo_features(n_samples=40, seed=42)
+        X, y = generate_demo_features(n_samples=8, seed=42)
         X_pca = pca_handler.transform(X)
         classical_model.fit_classifier(X_pca, y)
 
     if not vqc_loaded:
-        print("  Training VQC on DEMO data (20 epochs)...")
-        X, y = generate_demo_features(n_samples=40, seed=42)
+        print("  Training VQC on DEMO data (3 epochs)...")
+        X, y = generate_demo_features(n_samples=8, seed=42)
         X_pca = pca_handler.transform(X)
-        quantum_model.train_vqc(X_pca, y, epochs=20, lr=0.05)
+        quantum_model.train_vqc(X_pca, y, epochs=3, lr=0.05)
 
     print("Q-Knee ML Service initialized and ready.")
     yield

@@ -1,4 +1,4 @@
-﻿"""ML Service entry point."""
+"""ML Service entry point."""
 import uvicorn
 from dotenv import load_dotenv
 import os
@@ -10,5 +10,9 @@ if env_path.exists():
     load_dotenv(env_path)
 
 if __name__ == "__main__":
-    port = int(os.getenv("ML_PORT", "8000"))
-    uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=False)
+    port_str = os.getenv("PORT", os.getenv("ML_PORT", "8000"))
+    try:
+        port = int(port_str)
+    except (ValueError, TypeError):
+        port = 8000
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=False, workers=1)
