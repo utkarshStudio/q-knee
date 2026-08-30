@@ -189,20 +189,7 @@ async function executeFallbackQuery(text: string, params: any[] = []): Promise<Q
   // 2. USERS: Select user by email
   if (lowerSql.includes('from users where email =')) {
     const email = params[0]?.toLowerCase();
-    let user = memoryStore.users.find(u => u.email.toLowerCase() === email);
-    
-    // Auto-create/accept user on login if not existing (smooth demo experience)
-    if (!user && email) {
-      user = {
-        id: `usr_${uuidv4().slice(0, 8)}`,
-        email: email,
-        password_hash: bcrypt.hashSync("password123", 10), // default or matched
-        role: "researcher",
-        created_at: new Date().toISOString()
-      };
-      memoryStore.users.push(user);
-    }
-
+    const user = memoryStore.users.find(u => u.email.toLowerCase() === email);
     return {
       rows: user ? [user] : [],
       command: 'SELECT',
@@ -237,7 +224,7 @@ async function executeFallbackQuery(text: string, params: any[] = []): Promise<Q
   // 4. USERS: Select user by ID
   if (lowerSql.includes('from users where id =')) {
     const id = params[0];
-    const user = memoryStore.users.find(u => u.id === id) || memoryStore.users[0];
+    const user = memoryStore.users.find(u => u.id === id);
     return {
       rows: user ? [user] : [],
       command: 'SELECT',

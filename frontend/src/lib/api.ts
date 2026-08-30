@@ -19,10 +19,13 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const isAuthRoute = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/signup');
+    if (error.response?.status === 401 && !isAuthRoute) {
       localStorage.removeItem('hqml_token');
       localStorage.removeItem('hqml_user');
-      window.location.href = '/login';
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/signup')) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

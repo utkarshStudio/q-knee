@@ -16,16 +16,30 @@ const PORT = process.env.BACKEND_PORT || 3001;
 app.use(helmet());
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false }));
 
-// CORS Configuration (supports single or comma-separated origins, regex, or wildcard in non-prod)
-const rawOrigins = process.env.FRONTEND_URL || process.env.ALLOWED_ORIGINS || 'http://localhost:5173';
-const allowedOrigins = rawOrigins.split(',').map((o) => o.trim());
+// CORS Configuration
+const defaultAllowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://q-knee.vercel.app',
+  'https://qknee.vercel.app',
+];
+const rawOrigins = process.env.FRONTEND_URL || process.env.ALLOWED_ORIGINS || '';
+const configuredOrigins = rawOrigins.split(',').map((o) => o.trim()).filter(Boolean);
+const allowedOrigins = Array.from(new Set([...defaultAllowedOrigins, ...configuredOrigins]));
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+    if (
+      !origin ||
+      allowedOrigins.includes('*') ||
+      allowedOrigins.includes(origin) ||
+      (origin.startsWith('https://') && origin.endsWith('.vercel.app')) ||
+      process.env.NODE_ENV !== 'production'
+    ) {
       callback(null, true);
     } else {
-      callback(null, false);
+      callback(new Error(`CORS origin not allowed: ${origin}`));
     }
   },
   credentials: true,
