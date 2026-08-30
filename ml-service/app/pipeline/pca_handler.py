@@ -199,10 +199,11 @@ def load_pca() -> bool:
             return False
     return False
 
-def fit_pca(features: np.ndarray) -> None:
+def fit_pca(features: np.ndarray, n_components: Optional[int] = None) -> None:
     """Fit global PCA on training features."""
     global _pipeline
-    _pipeline = FeatureReductionPipeline(n_components=config.PCA_COMPONENTS)
+    components = n_components if n_components is not None else config.PCA_COMPONENTS
+    _pipeline = FeatureReductionPipeline(n_components=components)
     _pipeline.fit(features)
     _pipeline.save(_pca_path(), Path(config.MODEL_DIR) / "pca_metrics.json")
 

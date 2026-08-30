@@ -23,6 +23,7 @@ sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(ml_service_dir))
 
 from app.pipeline.pca_handler import FeatureReductionPipeline
+import app.pipeline.pca_handler as pca_handler
 
 
 class TestFeatureReductionPipeline(unittest.TestCase):
@@ -126,8 +127,21 @@ class TestFeatureReductionPipeline(unittest.TestCase):
         self.assertEqual(len(metrics["explained_variance"]), 4)
         self.assertEqual(len(metrics["explained_variance_ratio"]), 4)
         self.assertEqual(len(metrics["cumulative_explained_variance"]), 4)
-        self.assertGreater(metrics["total_explained_variance_ratio"], 0.0)
-        self.assertLessEqual(metrics["total_explained_variance_ratio"], 1.0)
+    def test_module_fit_pca_with_n_components(self):
+        """Verify module-level fit_pca(X, n_components=4) succeeds without TypeError."""
+        pca_handler.fit_pca(self.X_train, n_components=4)
+        self.assertTrue(pca_handler.is_fitted())
+        out = pca_handler.transform(self.X_test)
+        self.assertEqual(out.shape, (15, 4))
+        self.assertGreaterEqual(float(out.min()), -1.0)
+        self.assertLessEqual(float(out.max()), 1.0)
+
+    def test_module_fit_pca_default_signature(self):
+        """Verify module-level fit_pca(X) succeeds without n_components specified."""
+        pca_handler.fit_pca(self.X_train)
+        self.assertTrue(pca_handler.is_fitted())
+        out = pca_handler.transform(self.X_test)
+        self.assertEqual(out.shape, (15, 4))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,59 @@
+services:
+  # Python ML Microservice (FastAPI + PyTorch + PennyLane)
+  - type: web
+    name: qknee-ml-service
+    runtime: docker
+    rootDir: ml-service
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: QUANTUM_QUBITS
+        value: "4"
+      - key: QUANTUM_DEPTH
+        value: "2"
+      - key: PCA_COMPONENTS
+        value: "4"
+
+  # Node.js Express Backend REST API
+  - type: web
+    name: qknee-backend
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: ML_SERVICE_URL
+        fromService:
+          type: web
+          name: qknee-ml-service
+          property: host
+      - key: JWT_SECRET
+        generateValue: true
+
+  # React 19 Frontend Web Application (SPA)
+  - type: web
+    name: qknee-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: qknee-backend
+          property: host

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-30 08:33:34 UTC",
+  "timestamp": "2026-08-30 10:07:03 UTC",
   "mode": "REAL",
   "dataset_information": {
     "dataset_name": "RSNA Knee Abnormality Detection (Real Multi-Slice MRI)",
@@ -34,7 +34,7 @@
       "f1": 0.6666666666666666,
       "specificity": 0.0,
       "roc_auc": 0.25,
-      "latency_ms": 1.3706749996345025,
+      "latency_ms": 1.123725000070408,
       "confusion_matrix": {
         "tp": 2,
         "fp": 2,
@@ -59,7 +59,7 @@
       "f1": 0.4,
       "specificity": 0.0,
       "roc_auc": 0.0,
-      "latency_ms": 9.956800000509247,
+      "latency_ms": 5.440200000521145,
       "confusion_matrix": {
         "tp": 1,
         "fp": 2,

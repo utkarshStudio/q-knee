@@ -41,15 +41,24 @@ This setup requires **no credit card** and gives you dedicated HTTPS URLs for al
 ```
 
 ### Step 1: Deploy Python ML Microservice on Render (Free)
+
+#### Method A: Automated via Render Blueprint (Recommended)
+1. In [**Render.com**](https://render.com), click **New +** ➔ **Blueprint**.
+2. Select your repository `https://github.com/utkarshStudio/q-knee.git`.
+3. Render reads `render.yaml` and auto-provisions `qknee-ml-service` with zero manual path configuration!
+
+#### Method B: Manual Web Service Setup
 1. Go to [**Render.com**](https://render.com) and create a **New Web Service**.
 2. Connect your GitHub repository: `https://github.com/utkarshStudio/q-knee.git`.
 3. Configure the service:
    - **Name**: `qknee-ml-service`
+   - **Language / Runtime**: `Docker`
+   - **Branch**: `main`
    - **Root Directory**: `ml-service`
-   - **Runtime**: `Python 3`
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+   - **Docker Build Context**: `.` (or `ml-service`)
+   - **Dockerfile Path**: `Dockerfile` (or `ml-service/Dockerfile` if Root Directory is left empty)
    - **Plan**: `Free`
+   - **Health Check Path**: `/health`
 4. Click **Create Web Service**.
 5. *Copy the generated ML service URL (e.g., `https://qknee-ml-service.onrender.com`)*.
 

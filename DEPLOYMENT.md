@@ -62,16 +62,26 @@ docker compose logs -f
 
 ### Option A: PaaS (Render / Railway / Fly.io)
 
-1. **Python ML Microservice**:
-   - Environment: Python 3.11+
-   - Build Command: `pip install -r ml-service/requirements.txt`
-   - Start Command: `cd ml-service && uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-   - Health Check Path: `/health`
+#### Automated Deployment via Render Blueprint (`render.yaml`):
+1. In Render Dashboard, click **New +** ➔ **Blueprint**.
+2. Connect `https://github.com/utkarshStudio/q-knee.git`.
+3. Render will automatically read `render.yaml` and provision all 3 services (`qknee-ml-service`, `qknee-backend`, and `qknee-frontend`).
+
+#### Manual Service Setup on Render:
+1. **Python ML Microservice (Docker)**:
+   - **Language / Runtime**: `Docker`
+   - **Branch**: `main`
+   - **Root Directory**: `ml-service`
+   - **Docker Build Context**: `.` (or `ml-service`)
+   - **Dockerfile Path**: `Dockerfile` (or `ml-service/Dockerfile` if Root Directory is empty)
+   - **Health Check Path**: `/health`
 
 2. **Express Backend**:
-   - Environment: Node.js 20+
-   - Build Command: `cd backend && npm install && npm run build`
-   - Start Command: `cd backend && npm start`
+   - **Language / Runtime**: `Node`
+   - **Branch**: `main`
+   - **Root Directory**: `backend`
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `npm start`
    - Environment Variables:
      - `DATABASE_URL`: Managed PostgreSQL connection string
      - `ML_SERVICE_URL`: URL of the deployed ML microservice
