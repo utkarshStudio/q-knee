@@ -1,0 +1,85 @@
+{
+  "timestamp": "2026-08-30 08:33:34 UTC",
+  "mode": "REAL",
+  "dataset_information": {
+    "dataset_name": "RSNA Knee Abnormality Detection (Real Multi-Slice MRI)",
+    "mode": "REAL",
+    "total_studies": 12,
+    "train_samples": 8,
+    "test_samples": 4,
+    "class_distribution": {
+      "train": {
+        "abnormal": 4,
+        "normal": 4,
+        "imbalance_ratio": "4:4"
+      },
+      "test": {
+        "abnormal": 2,
+        "normal": 2,
+        "imbalance_ratio": "2:2"
+      }
+    },
+    "small_sample_warning": true,
+    "scientific_note": "Experimental comparison under exploratory research conditions. Small evaluation set size precludes claims of quantum advantage."
+  },
+  "results": [
+    {
+      "model_name": "ClassicalSVM",
+      "model_family": "Classical Baseline",
+      "mode": "REAL",
+      "sample_count": 4,
+      "accuracy": 0.5,
+      "precision_score": 0.5,
+      "recall": 1.0,
+      "f1": 0.6666666666666666,
+      "specificity": 0.0,
+      "roc_auc": 0.25,
+      "latency_ms": 1.3706749996345025,
+      "confusion_matrix": {
+        "tp": 2,
+        "fp": 2,
+        "tn": 0,
+        "fn": 0
+      },
+      "model_configuration": {
+        "model": "Support Vector Machine",
+        "kernel": "linear",
+        "C": 1.0,
+        "gamma": "scale"
+      }
+    },
+    {
+      "model_name": "HybridVQC",
+      "model_family": "Hybrid Quantum-Classical",
+      "mode": "SIMULATION",
+      "sample_count": 4,
+      "accuracy": 0.25,
+      "precision_score": 0.3333333333333333,
+      "recall": 0.5,
+      "f1": 0.4,
+      "specificity": 0.0,
+      "roc_auc": 0.0,
+      "latency_ms": 9.956800000509247,
+      "confusion_matrix": {
+        "tp": 1,
+        "fp": 2,
+        "tn": 0,
+        "fn": 1
+      },
+      "model_configuration": {
+        "model": "Variational Quantum Classifier",
+        "qubits": 4,
+        "depth": 2,
+        "encoding": "Angle Encoding (RY)",
+        "ansatz": "RZ-RX-RZ + Circular CNOT",
+        "backend": "default.qubit (SIMULATION)"
+      }
+    }
+  ],
+  "charts": {
+    "roc_curve_svg": "/benchmarks/roc_curve.svg",
+    "confusion_matrices_svg": "/benchmarks/confusion_matrices.svg",
+    "metrics_comparison_svg": "/benchmarks/metrics_comparison.svg"
+  },
+  "random_seed": 42
+}

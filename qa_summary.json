@@ -1,0 +1,209 @@
+[
+  {
+    "category": "DATA",
+    "test": "Valid NPY Volume Loading",
+    "status": "PASS",
+    "evidence": "Loaded 8 slices from 3D NPY array successfully.",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "DATA",
+    "test": "Valid Image Loading",
+    "status": "PASS",
+    "evidence": "Successfully loaded and converted slice to grayscale PIL Image.",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "DATA",
+    "test": "Malformed / Missing File Handling",
+    "status": "PASS",
+    "evidence": "Gracefully returned empty slice list without crashing batch processing.",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "DATA",
+    "test": "Empty File Handling",
+    "status": "PASS",
+    "evidence": "0-byte file caught and rejected gracefully.",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "DATA",
+    "test": "Unsupported Extension Handling",
+    "status": "PASS",
+    "evidence": "Unsupported extension (.exe) rejected without uncaught exception.",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "ML",
+    "test": "ResNet18 Feature Dimensionality",
+    "status": "PASS",
+    "evidence": "Output dimension is exactly 512 float32 features.",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "ML",
+    "test": "PCA 512D -> 4D Dimensionality & Scaling",
+    "status": "PASS",
+    "evidence": "Output is exactly 4 features bounded strictly in [-1.0, 1.0].",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "ML",
+    "test": "4-Qubit VQC Inference",
+    "status": "PASS",
+    "evidence": "Predicted class: normal | p(abnormal)=0.473",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "ML",
+    "test": "Deterministic Inference",
+    "status": "PASS",
+    "evidence": "Identical inputs produce bit-exact identical screening probabilities.",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "XAI",
+    "test": "Grad-CAM Convolutional Target Layer",
+    "status": "PASS",
+    "evidence": "Hooked ResNet18.layer4[1].conv2; generated original, heatmap, and overlay images.",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "XAI",
+    "test": "4D Signed Feature Attribution",
+    "status": "PASS",
+    "evidence": "Computed signed sensitivity decomposition across all 4 PCA dimensions.",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "API",
+    "test": "GET /health Endpoint",
+    "status": "PASS",
+    "evidence": "Returns 200 OK with quantum backend and PCA telemetry.",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "API",
+    "test": "GET /health/models Endpoint",
+    "status": "PASS",
+    "evidence": "Exposes ResNet18, PCA, Classical SVM, and 4-Qubit VQC telemetry.",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "API",
+    "test": "POST /predict Pipeline Execution",
+    "status": "PASS",
+    "evidence": "Study qa_study_001: normal (p=0.353)",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "API",
+    "test": "POST /explain Unified Endpoint",
+    "status": "PASS",
+    "evidence": "Synchronously returned Grad-CAM overlay and 4D feature attributions.",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "SECURITY",
+    "test": "Path Traversal Mitigation",
+    "status": "PASS",
+    "evidence": "Blocked relative directory traversal attacks on image assets.",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "SECURITY",
+    "test": "Input Whitelisting on File Endpoints",
+    "status": "PASS",
+    "evidence": "Restricted to strictly allowed image types: original, heatmap, overlay.",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "SECURITY",
+    "test": "Zero Stack Trace Leakage",
+    "status": "PASS",
+    "evidence": "FastAPI/Pydantic validation returns sanitized JSON errors without internal traces.",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "PERF",
+    "test": "Slice Preprocessing Latency",
+    "status": "PASS",
+    "evidence": "0.13 ms / slice (Target < 10 ms)",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "PERF",
+    "test": "ResNet18 Feature Extraction Latency",
+    "status": "PASS",
+    "evidence": "12.70 ms / slice (Target < 100 ms)",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "PERF",
+    "test": "PCA 512D -> 4D Transform Latency",
+    "status": "PASS",
+    "evidence": "0.0290 ms / sample (Target < 1 ms)",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "PERF",
+    "test": "4-Qubit VQC Simulation Latency",
+    "status": "PASS",
+    "evidence": "0.01 ms / inference (Target < 50 ms)",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  },
+  {
+    "category": "PERF",
+    "test": "Full End-to-End Pipeline Latency",
+    "status": "PASS",
+    "evidence": "106.10 ms total (Volume Loading + ResNet + PCA + VQC)",
+    "failure": "None",
+    "fix": "N/A",
+    "risk": "Low"
+  }
+]

@@ -1,0 +1,193 @@
+{
+  "n_qubits": 4,
+  "depth": 2,
+  "rotations_per_qubit": 3,
+  "quantum_backend": "default.qubit (SIMULATION)",
+  "random_seed": 42,
+  "training_time_seconds": 27.78621220588684,
+  "total_epochs_trained": 20,
+  "best_epoch": 20,
+  "best_train_loss": 0.4446975290775299,
+  "best_val_loss": 0.4446975290775299,
+  "best_val_accuracy": 0.5,
+  "best_val_roc_auc": 1.0,
+  "best_val_f1": 1.0,
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.9851635694503784,
+      "val_loss": 0.9851635694503784,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.9069297313690186,
+      "val_loss": 0.9069297313690186,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.8283979296684265,
+      "val_loss": 0.8283979296684265,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.7593441605567932,
+      "val_loss": 0.7593441605567932,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.6954649090766907,
+      "val_loss": 0.6954649090766907,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.6382007002830505,
+      "val_loss": 0.6382007002830505,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.596530556678772,
+      "val_loss": 0.596530556678772,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.5645461082458496,
+      "val_loss": 0.5645461082458496,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.5419842600822449,
+      "val_loss": 0.5419842600822449,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.5247396230697632,
+      "val_loss": 0.5247396230697632,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    },
+    {
+      "epoch": 11,
+      "train_loss": 0.5121761560440063,
+      "val_loss": 0.5121761560440063,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    },
+    {
+      "epoch": 12,
+      "train_loss": 0.5034926533699036,
+      "val_loss": 0.5034926533699036,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    },
+    {
+      "epoch": 13,
+      "train_loss": 0.4944460988044739,
+      "val_loss": 0.4944460988044739,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    },
+    {
+      "epoch": 14,
+      "train_loss": 0.4866640269756317,
+      "val_loss": 0.4866640269756317,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    },
+    {
+      "epoch": 15,
+      "train_loss": 0.4797474145889282,
+      "val_loss": 0.4797474145889282,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    },
+    {
+      "epoch": 16,
+      "train_loss": 0.472049355506897,
+      "val_loss": 0.472049355506897,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    },
+    {
+      "epoch": 17,
+      "train_loss": 0.4656889736652374,
+      "val_loss": 0.4656889736652374,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    },
+    {
+      "epoch": 18,
+      "train_loss": 0.45833754539489746,
+      "val_loss": 0.45833754539489746,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    },
+    {
+      "epoch": 19,
+      "train_loss": 0.45160138607025146,
+      "val_loss": 0.45160138607025146,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    },
+    {
+      "epoch": 20,
+      "train_loss": 0.4446975290775299,
+      "val_loss": 0.4446975290775299,
+      "val_accuracy": 0.5,
+      "val_roc_auc": 1.0,
+      "val_f1": 1.0
+    }
+  ],
+  "created_at": "2026-08-30 13:11:15",
+  "preprocessing_version": "1.0-resnet18-pca4",
+  "test_metrics": {
+    "loss": 1.3936426639556885,
+    "accuracy": 0.25,
+    "precision": 0.3333333333333333,
+    "recall": 0.5,
+    "f1": 0.4,
+    "roc_auc": 0.0,
+    "sample_count": 4
+  },
+  "latency_benchmark": {
+    "mean_latency_ms": 3.6122500023338944,
+    "std_latency_ms": 0.5965728812839514,
+    "evaluations": 8
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "model_type": "Classical Support Vector Machine (SVM)",
+  "best_hyperparameters": {
+    "C": 1.0,
+    "gamma": "scale",
+    "kernel": "linear"
+  },
+  "training_samples": 8,
+  "class_distribution": {
+    "abnormal": 4,
+    "normal": 4
+  },
+  "training_time_seconds": 0.23707399999693735,
+  "random_seed": 42
+}
