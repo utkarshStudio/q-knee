@@ -98,12 +98,14 @@ export default function StudyDetailPage() {
 
   let fileList: string[] = [];
   try {
-    fileList = JSON.parse(study.storage_reference || "[]");
+    fileList = typeof study.storage_reference === "string" ? JSON.parse(study.storage_reference || "[]") : (study.storage_reference || []);
   } catch {
     fileList = [];
   }
-  const estimatedSlices = Math.max(1, fileList.length || 8);
+  const totalSlices = Math.max(1, Number(study.slice_count ?? study.metadata?.slice_count ?? (fileList.length > 0 ? fileList.length : 1)));
+  const has3dVolume = Boolean(study.has_3d_volume ?? (study.metadata?.has_3d_volume || totalSlices > 3));
   const explanationId = explanationData?.explanation?.id;
+  const originalSliceUrl = `/api/studies/${study.id}/slice/${currentSlice}`;
 
   return (
     <AppLayout>
@@ -139,15 +141,13 @@ export default function StudyDetailPage() {
           <div className="lg:col-span-7 space-y-3">
             <MriViewer
               studyId={study.id}
-              totalSlices={estimatedSlices}
+              totalSlices={totalSlices}
               currentSlice={currentSlice}
               onSliceChange={setCurrentSlice}
-              has3dVolume={false}
+              has3dVolume={has3dVolume}
               activePlane={activePlane}
               onPlaneChange={setActivePlane}
-              originalImageUrl={
-                explanationId ? `/api/explanations/${explanationId}/image/original` : undefined
-              }
+              originalImageUrl={originalSliceUrl}
               heatmapImageUrl={
                 explanationId ? `/api/explanations/${explanationId}/image/heatmap` : undefined
               }
@@ -176,6 +176,14 @@ export default function StudyDetailPage() {
                 <div>
                   <div className="text-slate-400 text-[11px]">Series Files</div>
                   <div className="font-semibold text-slate-800">{fileList.length || 1} file(s)</div>
+                </div>
+                <div>
+                  <div className="text-slate-400 text-[11px]">Total Slices</div>
+                  <div className="font-semibold text-blue-700">{totalSlices} slice{totalSlices > 1 ? "s" : ""}</div>
+                </div>
+                <div>
+                  <div className="text-slate-400 text-[11px]">Volume Geometry</div>
+                  <div className="font-semibold text-slate-800">{has3dVolume ? "3D Volumetric" : "Single 2D Slice"}</div>
                 </div>
                 <div>
                   <div className="text-slate-400 text-[11px]">Ground Truth</div>

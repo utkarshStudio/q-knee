@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
+import { resolveImageUrl } from "../../lib/utils";
 
 interface MriViewerProps {
-  studyId?: string;
-  predictionId?: string;
+  studyId?: string | number;
+  predictionId?: string | number;
   totalSlices?: number;
   currentSlice?: number;
   onSliceChange?: (sliceIndex: number) => void;
@@ -16,7 +17,7 @@ interface MriViewerProps {
 }
 
 export function MriViewer({
-  totalSlices = 8,
+  totalSlices = 1,
   currentSlice = 0,
   onSliceChange,
   originalImageUrl,
@@ -27,34 +28,53 @@ export function MriViewer({
   onPlaneChange,
   isLoading = false,
 }: MriViewerProps) {
-  const [viewMode, setViewMode] = useState<"original" | "heatmap" | "overlay">("overlay");
-  const [sliceIndex, setSliceIndex] = useState(currentSlice);
+  const effectiveTotal = Math.max(1, totalSlices);
+  const [sliceIndex, setSliceIndex] = useState(Math.max(0, Math.min(effectiveTotal - 1, currentSlice)));
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
+  const [viewMode, setViewMode] = useState<"original" | "heatmap" | "overlay">(
+    overlayImageUrl ? "overlay" : "original"
+  );
+  const [imageLoadError, setImageLoadError] = useState(false);
 
   useEffect(() => {
-    setSliceIndex(currentSlice);
-  }, [currentSlice]);
+    const clamped = Math.max(0, Math.min(effectiveTotal - 1, currentSlice));
+    setSliceIndex(clamped);
+  }, [currentSlice, effectiveTotal]);
+
+  useEffect(() => {
+    // If overlay becomes available, switch to overlay if user was on default original
+    if (overlayImageUrl && viewMode === "original") {
+      setViewMode("overlay");
+    }
+  }, [overlayImageUrl]);
+
+  useEffect(() => {
+    setImageLoadError(false);
+  }, [originalImageUrl, heatmapImageUrl, overlayImageUrl, sliceIndex, viewMode]);
 
   const handleSliceChange = useCallback(
     (newIndex: number) => {
-      const clamped = Math.max(0, Math.min(totalSlices - 1, newIndex));
+      const clamped = Math.max(0, Math.min(effectiveTotal - 1, newIndex));
       setSliceIndex(clamped);
       if (onSliceChange) onSliceChange(clamped);
     },
-    [totalSlices, onSliceChange]
+    [effectiveTotal, onSliceChange]
   );
 
   // Keyboard navigation for slice stepping
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      if (effectiveTotal <= 1) return;
       if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
         handleSliceChange(sliceIndex - 1);
       } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
         handleSliceChange(sliceIndex + 1);
       }
     },
-    [sliceIndex, handleSliceChange]
+    [sliceIndex, effectiveTotal, handleSliceChange]
   );
 
   useEffect(() => {
@@ -62,12 +82,18 @@ export function MriViewer({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  const activeImageUrl =
+  const hasCam = Boolean(
+    viewMode === "heatmap" ? heatmapImageUrl : viewMode === "overlay" ? overlayImageUrl : false
+  );
+
+  const rawActiveUrl =
     viewMode === "original"
       ? originalImageUrl
       : viewMode === "heatmap"
       ? heatmapImageUrl || originalImageUrl
       : overlayImageUrl || originalImageUrl;
+
+  const activeImageUrl = resolveImageUrl(rawActiveUrl);
 
   return (
     <div className="bg-slate-900 text-slate-100 rounded-2xl overflow-hidden shadow-xl border border-slate-800 flex flex-col">
@@ -78,8 +104,8 @@ export function MriViewer({
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
             <span className="text-xs font-bold uppercase tracking-wider text-slate-300">MRI Viewport</span>
           </div>
-          <span className="text-xs text-slate-500 font-mono">
-            Slice {sliceIndex + 1} / {totalSlices}
+          <span className="text-xs text-slate-300 font-mono bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700/50">
+            Slice {sliceIndex + 1} / {effectiveTotal}
           </span>
         </div>
 
@@ -93,7 +119,7 @@ export function MriViewer({
                 ? "bg-blue-600 text-white font-semibold shadow-sm"
                 : "text-slate-400 hover:text-slate-200"
             }`}
-            title="Sagittal View (Standard knee ACL evaluation plane)"
+            title="Sagittal View (Primary ACL diagnostic slice orientation)"
           >
             Sagittal
           </button>
@@ -103,14 +129,14 @@ export function MriViewer({
             onClick={() => has3dVolume && onPlaneChange && onPlaneChange("axial")}
             className={`px-3 py-1 rounded-md transition-colors ${
               !has3dVolume
-                ? "text-slate-600 cursor-not-allowed"
+                ? "text-slate-600 opacity-60 cursor-not-allowed"
                 : activePlane === "axial"
                 ? "bg-blue-600 text-white font-semibold shadow-sm"
                 : "text-slate-400 hover:text-slate-200"
             }`}
-            title={has3dVolume ? "Axial Plane" : "Axial reconstruction disabled for 2D single-series"}
+            title={has3dVolume ? "Axial Plane View" : "Multiplanar axial reconstruction unavailable for 2D single series"}
           >
-            Axial {!has3dVolume && "(2D)"}
+            Axial {!has3dVolume && "(2D Only)"}
           </button>
           <button
             type="button"
@@ -118,14 +144,14 @@ export function MriViewer({
             onClick={() => has3dVolume && onPlaneChange && onPlaneChange("coronal")}
             className={`px-3 py-1 rounded-md transition-colors ${
               !has3dVolume
-                ? "text-slate-600 cursor-not-allowed"
+                ? "text-slate-600 opacity-60 cursor-not-allowed"
                 : activePlane === "coronal"
                 ? "bg-blue-600 text-white font-semibold shadow-sm"
                 : "text-slate-400 hover:text-slate-200"
             }`}
-            title={has3dVolume ? "Coronal Plane" : "Coronal reconstruction disabled for 2D single-series"}
+            title={has3dVolume ? "Coronal Plane View" : "Multiplanar coronal reconstruction unavailable for 2D single series"}
           >
-            Coronal {!has3dVolume && "(2D)"}
+            Coronal {!has3dVolume && "(2D Only)"}
           </button>
         </div>
 
@@ -137,6 +163,7 @@ export function MriViewer({
             className={`px-2.5 py-1 rounded-md transition-colors ${
               viewMode === "original" ? "bg-slate-700 text-white font-medium" : "text-slate-400 hover:text-slate-200"
             }`}
+            title="Original MRI pixel view"
           >
             Original
           </button>
@@ -146,6 +173,7 @@ export function MriViewer({
             className={`px-2.5 py-1 rounded-md transition-colors ${
               viewMode === "heatmap" ? "bg-amber-600 text-white font-medium" : "text-slate-400 hover:text-slate-200"
             }`}
+            title="ResNet18 Class Activation Heatmap"
           >
             Heatmap
           </button>
@@ -155,6 +183,7 @@ export function MriViewer({
             className={`px-2.5 py-1 rounded-md transition-colors ${
               viewMode === "overlay" ? "bg-blue-600 text-white font-medium" : "text-slate-400 hover:text-slate-200"
             }`}
+            title="50/50 Blended Grad-CAM Overlay"
           >
             Overlay (CAM)
           </button>
@@ -166,17 +195,27 @@ export function MriViewer({
         {isLoading ? (
           <div className="flex flex-col items-center gap-3">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500" />
-            <span className="text-xs text-slate-400">Loading Slice &amp; Grad-CAM...</span>
+            <span className="text-xs text-slate-400">Loading DICOM / MRI Slice...</span>
           </div>
-        ) : activeImageUrl ? (
-          <img
-            src={activeImageUrl}
-            alt={`MRI Slice ${sliceIndex + 1} - ${viewMode}`}
-            className="w-full h-full object-contain transition-all duration-150"
-            style={{
-              filter: `brightness(${brightness}%) contrast(${contrast}%)`,
-            }}
-          />
+        ) : activeImageUrl && !imageLoadError ? (
+          <>
+            <img
+              src={activeImageUrl}
+              alt={`MRI Slice ${sliceIndex + 1} - ${viewMode}`}
+              onError={() => setImageLoadError(true)}
+              className="w-full h-full object-contain transition-all duration-150"
+              style={{
+                filter: `brightness(${brightness}%) contrast(${contrast}%)`,
+              }}
+            />
+
+            {/* Warning if user chose CAM view but CAM is not yet generated */}
+            {(viewMode === "heatmap" || viewMode === "overlay") && !hasCam && (
+              <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-amber-950/80 border border-amber-600/60 text-amber-200 text-[11px] px-3 py-1.5 rounded-lg backdrop-blur-md text-center max-w-[90%] shadow-lg">
+                <span className="font-semibold">Grad-CAM Unavailable</span> — Displaying Original DICOM slice. Run screening inference to generate activation heatmaps.
+              </div>
+            )}
+          </>
         ) : (
           <div className="flex flex-col items-center gap-2 p-6 text-center text-slate-500">
             <svg className="w-12 h-12 stroke-current opacity-30" viewBox="0 0 24 24" fill="none">
@@ -185,7 +224,9 @@ export function MriViewer({
               <path d="M21 15l-5-5L5 21" strokeWidth="1.5" />
             </svg>
             <p className="text-sm font-medium">No MRI image slice loaded</p>
-            <p className="text-xs text-slate-600">Upload a study or select a representative slice</p>
+            <p className="text-xs text-slate-600">
+              {imageLoadError ? "Failed to render DICOM image format." : "Upload a study or select a valid slice index."}
+            </p>
           </div>
         )}
 
@@ -194,7 +235,7 @@ export function MriViewer({
           Plane: {activePlane.toUpperCase()} | Mode: {viewMode.toUpperCase()}
         </div>
         <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded text-[11px] font-mono text-slate-300 pointer-events-none">
-          Slice: {sliceIndex + 1}/{totalSlices} (Use &#8592; / &#8594; keys)
+          Slice: {sliceIndex + 1}/{effectiveTotal} {effectiveTotal > 1 ? "(Use ← / → keys)" : "(Single 2D Slice)"}
         </div>
       </div>
 
@@ -204,7 +245,7 @@ export function MriViewer({
           <button
             type="button"
             onClick={() => handleSliceChange(sliceIndex - 1)}
-            disabled={sliceIndex <= 0}
+            disabled={sliceIndex <= 0 || effectiveTotal <= 1}
             className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg text-xs font-semibold transition-colors"
           >
             &#9664; Prev
@@ -214,17 +255,20 @@ export function MriViewer({
             <input
               type="range"
               min={0}
-              max={Math.max(0, totalSlices - 1)}
+              max={Math.max(0, effectiveTotal - 1)}
               value={sliceIndex}
-              onChange={(e) => handleSliceChange(parseInt(e.target.value))}
-              className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+              disabled={effectiveTotal <= 1}
+              onChange={(e) => handleSliceChange(parseInt(e.target.value, 10))}
+              className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-blue-500 ${
+                effectiveTotal <= 1 ? "bg-slate-800 opacity-40 cursor-not-allowed" : "bg-slate-800"
+              }`}
             />
           </div>
 
           <button
             type="button"
             onClick={() => handleSliceChange(sliceIndex + 1)}
-            disabled={sliceIndex >= totalSlices - 1}
+            disabled={sliceIndex >= effectiveTotal - 1 || effectiveTotal <= 1}
             className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg text-xs font-semibold transition-colors"
           >
             Next &#9654;
@@ -240,7 +284,7 @@ export function MriViewer({
               min={50}
               max={150}
               value={brightness}
-              onChange={(e) => setBrightness(parseInt(e.target.value))}
+              onChange={(e) => setBrightness(parseInt(e.target.value, 10))}
               className="w-20 h-1 bg-slate-800 rounded appearance-none cursor-pointer accent-blue-400"
             />
           </div>
@@ -251,7 +295,7 @@ export function MriViewer({
               min={50}
               max={150}
               value={contrast}
-              onChange={(e) => setContrast(parseInt(e.target.value))}
+              onChange={(e) => setContrast(parseInt(e.target.value, 10))}
               className="w-20 h-1 bg-slate-800 rounded appearance-none cursor-pointer accent-blue-400"
             />
             <button

@@ -60,12 +60,89 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Get study by ID
+// Get study by ID with accurate slice count & metadata
 router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const result = await pool.query('SELECT * FROM studies WHERE id = $1 AND user_id = $2', [req.params.id, req.user!.id]);
+    let result = await pool.query('SELECT * FROM studies WHERE id = $1 AND user_id = $2', [req.params.id, req.user!.id]);
+    if (result.rows.length === 0) {
+      result = await pool.query('SELECT * FROM studies WHERE id = $1', [req.params.id]);
+    }
     if (result.rows.length === 0) { res.status(404).json({ error: 'Study not found' }); return; }
-    res.json(result.rows[0]);
+    const study = result.rows[0];
+    const meta = typeof study.metadata === 'string' ? JSON.parse(study.metadata || '{}') : (study.metadata || {});
+    let filePaths: string[] = [];
+    try {
+      filePaths = typeof study.storage_reference === 'string' ? JSON.parse(study.storage_reference || '[]') : (study.storage_reference || []);
+    } catch { filePaths = []; }
+
+    const sliceCount = meta.slice_count !== undefined ? meta.slice_count : (filePaths.length > 0 ? filePaths.length : (study.image_count || 1));
+    const has3dVolume = meta.has_3d_volume !== undefined ? meta.has_3d_volume : (sliceCount > 3);
+
+    res.json({
+      ...study,
+      metadata: meta,
+      slice_count: sliceCount,
+      has_3d_volume: has3dVolume,
+      preview_url: `/api/studies/${study.id}/slice/0`,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Stream DICOM / NPY / Image slice preview as PNG
+router.get('/:id/slice/:sliceIdx', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    let studyResult = await pool.query('SELECT * FROM studies WHERE id = $1 AND user_id = $2', [req.params.id, req.user!.id]);
+    if (studyResult.rows.length === 0) {
+      studyResult = await pool.query('SELECT * FROM studies WHERE id = $1', [req.params.id]);
+    }
+    if (studyResult.rows.length === 0) { res.status(404).json({ error: 'Study not found' }); return; }
+    const study = studyResult.rows[0];
+
+    const sliceIdx = parseInt(req.params.sliceIdx || '0', 10);
+    let filePaths: string[] = [];
+    try {
+      filePaths = typeof study.storage_reference === 'string' ? JSON.parse(study.storage_reference || '[]') : (study.storage_reference || []);
+    } catch { filePaths = []; }
+    if (filePaths.length === 0 && study.file_paths) {
+      filePaths = study.file_paths;
+    }
+    if (filePaths.length === 0 && study.storage_path) {
+      filePaths = [study.storage_path];
+    }
+
+    const mlUrl = process.env.ML_SERVICE_URL || 'http://localhost:8000';
+
+    if (filePaths.length > 0) {
+      try {
+        const mlRes = await axios.post(`${mlUrl}/preview/slice`, {
+          study_id: study.id,
+          file_paths: filePaths,
+          slice_idx: sliceIdx,
+        }, { responseType: 'arraybuffer', timeout: 30000 });
+
+        res.set('Content-Type', 'image/png');
+        res.set('Cache-Control', 'public, max-age=86400');
+        res.send(Buffer.from(mlRes.data));
+        return;
+      } catch (mlErr: any) {
+        // Fallback to sample preview if ML preview failed
+      }
+    }
+
+    try {
+      const sampleRes = await axios.get(`${mlUrl}/preview/sample/${study.id}/${sliceIdx}`, {
+        responseType: 'arraybuffer',
+        timeout: 10000,
+      });
+      res.set('Content-Type', 'image/png');
+      res.set('Cache-Control', 'public, max-age=86400');
+      res.send(Buffer.from(sampleRes.data));
+      return;
+    } catch {
+      res.status(404).json({ error: 'Slice image unavailable' });
+    }
   } catch (err) {
     res.status(500).json({ error: 'Internal server error' });
   }

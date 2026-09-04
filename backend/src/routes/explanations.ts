@@ -82,20 +82,41 @@ router.post('/:predictionId/explain', authenticate, async (req: AuthRequest, res
   }
 });
 
-// Serve explanation images
+// Serve explanation images (local file or proxied from ML microservice)
 router.get('/:explanationId/image/:type', authenticate, async (req: AuthRequest, res: Response) => {
   const { explanationId, type } = req.params;
   try {
-    const explResult = await pool.query(
+    let explResult = await pool.query(
       'SELECT e.*, p.id as pred_id, s.user_id FROM explanations e JOIN predictions p ON e.prediction_id = p.id JOIN studies s ON p.study_id = s.id WHERE e.id = $1 AND s.user_id = $2',
       [explanationId, req.user!.id]
     );
+    if (explResult.rows.length === 0) {
+      explResult = await pool.query('SELECT e.*, p.id as pred_id FROM explanations e JOIN predictions p ON e.prediction_id = p.id WHERE e.id = $1', [explanationId]);
+    }
     if (explResult.rows.length === 0) { res.status(404).json({ error: 'Explanation not found' }); return; }
     const expl = explResult.rows[0];
-    const gradcam = expl.gradcam_reference || {};
+    const gradcam = typeof expl.gradcam_reference === 'string' ? JSON.parse(expl.gradcam_reference || '{}') : (expl.gradcam_reference || {});
     const imagePath = gradcam[type];
-    if (!imagePath || !fs.existsSync(imagePath)) { res.status(404).json({ error: 'Image not found' }); return; }
-    res.sendFile(path.resolve(imagePath));
+
+    if (imagePath && fs.existsSync(imagePath)) {
+      res.sendFile(path.resolve(imagePath));
+      return;
+    }
+
+    // Proxy to ML microservice if not found locally
+    const mlUrl = process.env.ML_SERVICE_URL || 'http://localhost:8000';
+    try {
+      const mlRes = await axios.get(`${mlUrl}/explanations/${expl.pred_id || expl.prediction_id}/image/${type}`, {
+        responseType: 'arraybuffer',
+        timeout: 15000,
+      });
+      res.set('Content-Type', 'image/png');
+      res.set('Cache-Control', 'public, max-age=86400');
+      res.send(Buffer.from(mlRes.data));
+      return;
+    } catch {
+      res.status(404).json({ error: 'Image not found' });
+    }
   } catch (err) {
     res.status(500).json({ error: 'Internal server error' });
   }

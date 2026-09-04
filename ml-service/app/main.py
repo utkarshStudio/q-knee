@@ -96,6 +96,14 @@ class GradcamRequest(BaseModel):
     label_idx: int = 1
 
 
+import io
+from fastapi.responses import Response
+
+class SlicePreviewRequest(BaseModel):
+    study_id: Optional[str] = None
+    file_paths: List[str]
+    slice_idx: int = 0
+
 class ProcessRequest(BaseModel):
     study_id: str
     file_paths: List[str]
@@ -156,6 +164,62 @@ def model_health():
     }
 
 
+@app.post("/preview/slice")
+async def preview_slice(req: SlicePreviewRequest):
+    """Render and return a specific slice from uploaded DICOM/NPY files as PNG."""
+    try:
+        slices = []
+        if req.file_paths:
+            try:
+                slices = load_study_slices(req.file_paths)
+            except Exception:
+                slices = []
+
+        if not slices:
+            for path_str in req.file_paths:
+                img = load_image_from_path(path_str)
+                if img is not None:
+                    slices.append(img)
+
+        if not slices:
+            raise HTTPException(status_code=404, detail="No valid DICOM/MRI slices found")
+
+        total = len(slices)
+        idx = max(0, min(total - 1, req.slice_idx))
+        target_img = slices[idx]
+
+        buf = io.BytesIO()
+        target_img.save(buf, format="PNG")
+        buf.seek(0)
+        return Response(content=buf.getvalue(), media_type="image/png")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to render slice preview: {str(e)}")
+
+
+@app.get("/preview/sample/{study_id}/{slice_idx}")
+def get_sample_slice(study_id: str, slice_idx: int = 0):
+    """Retrieve slice from sample dataset volumes."""
+    project_root = Path(__file__).parent.parent.parent.resolve()
+    sample_path = project_root / "data" / "sample_mri_dataset" / "train_series" / study_id / "volume.npy"
+    if not sample_path.exists():
+        # Check fallback demo volume
+        sample_path = project_root / "data" / "sample_mri_dataset" / "train_series" / "study_001" / "volume.npy"
+    if not sample_path.exists():
+        raise HTTPException(status_code=404, detail="Sample study volume not found")
+
+    slices = load_npy_volume(sample_path)
+    if not slices:
+        raise HTTPException(status_code=404, detail="Could not load sample volume slices")
+
+    idx = max(0, min(len(slices) - 1, slice_idx))
+    buf = io.BytesIO()
+    slices[idx].save(buf, format="PNG")
+    buf.seek(0)
+    return Response(content=buf.getvalue(), media_type="image/png")
+
+
 @app.post("/process")
 async def process_study(req: ProcessRequest):
     """Single source of truth for volume parsing, format validation, and preprocessing metadata."""
@@ -170,6 +234,7 @@ async def process_study(req: ProcessRequest):
                     "status": "error",
                     "error": str(e),
                     "slice_count": 0,
+                    "has_3d_volume": False,
                 }
 
         slice_count = len(slices)
@@ -181,10 +246,11 @@ async def process_study(req: ProcessRequest):
             "study_id": req.study_id,
             "status": "ready",
             "slice_count": slice_count,
+            "has_3d_volume": slice_count > 3,
             "image_size": img_size,
             "target_dimensions": [128, 128],
             "normalization": "Zero-mean ImageNet std scaling",
-            "format": "DICOM/NPY" if req.file_paths and any(p.endswith((".dcm", ".npy")) for p in req.file_paths) else "Standard Image",
+            "format": "DICOM/NPY" if req.file_paths and any(p.endswith((".dcm", ".npy", ".dicom")) for p in req.file_paths) else "Standard Image",
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
