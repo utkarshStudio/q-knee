@@ -5,6 +5,7 @@ Supports metadata-based physical slice sorting, window leveling (VOI LUT), photo
 and consistent normalization for medical MRI studies.
 """
 
+import io
 import os
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
@@ -36,7 +37,7 @@ def apply_dicom_windowing(
         window_width = window_width[0] if len(window_width) > 0 else None
 
     # 3. Apply Window Leveling if available
-    if window_center is not None and window_width is not None and window_width > 0:
+    if window_center is not None and window_width is not None and float(window_width) > 0:
         c = float(window_center)
         w = float(window_width)
         lower = c - 0.5 - (w - 1.0) / 2.0
@@ -44,29 +45,37 @@ def apply_dicom_windowing(
         arr = np.clip(arr, lower, upper)
         arr = (arr - lower) / (upper - lower + 1e-8)
     else:
-        # Fallback: robust percentile min-max normalization
-        min_val = np.min(arr)
-        max_val = np.max(arr)
-        if max_val > min_val:
-            arr = (arr - min_val) / (max_val - min_val)
+        # Fallback: robust percentile min-max normalization (ignore extremes)
+        p_low, p_high = np.percentile(arr, (0.5, 99.5))
+        if p_high > p_low:
+            arr = np.clip((arr - p_low) / (p_high - p_low), 0.0, 1.0)
         else:
-            arr = np.zeros_like(arr)
+            min_val = np.min(arr)
+            max_val = np.max(arr)
+            if max_val > min_val:
+                arr = (arr - min_val) / (max_val - min_val)
+            else:
+                arr = np.zeros_like(arr)
 
     # 4. Invert MONOCHROME1 (where minimum value is intended to be displayed as white)
-    if photometric_interpretation.upper() == "MONOCHROME1":
+    if str(photometric_interpretation).upper() == "MONOCHROME1":
         arr = 1.0 - arr
 
     return np.clip(arr, 0.0, 1.0)
 
 
-def read_dicom_slice(path: Union[str, Path]) -> Tuple[Optional[Image.Image], Optional[dict]]:
+def read_dicom_slice(source: Union[str, Path, io.BytesIO, bytes]) -> Tuple[Optional[Image.Image], Optional[dict]]:
     """
     Safely load a single DICOM slice with metadata extraction and window normalization.
+    Accepts file path (str/Path), BytesIO stream, or raw bytes.
     Returns (PIL Image, metadata_dict) or (None, None) if corrupted/invalid.
     """
     try:
         import pydicom
-        ds = pydicom.dcmread(str(path), force=True)
+        if isinstance(source, bytes):
+            source = io.BytesIO(source)
+
+        ds = pydicom.dcmread(source, force=True)
         if not hasattr(ds, "pixel_array"):
             return None, None
 
@@ -88,7 +97,6 @@ def read_dicom_slice(path: Union[str, Path]) -> Tuple[Optional[Image.Image], Opt
 
         # Extract spatial ordering metadata
         metadata = {
-            "path": str(path),
             "instance_number": getattr(ds, "InstanceNumber", None),
             "slice_location": getattr(ds, "SliceLocation", None),
             "image_position": getattr(ds, "ImagePositionPatient", None),
@@ -96,11 +104,11 @@ def read_dicom_slice(path: Union[str, Path]) -> Tuple[Optional[Image.Image], Opt
             "study_uid": getattr(ds, "StudyInstanceUID", None),
             "rows": getattr(ds, "Rows", None),
             "columns": getattr(ds, "Columns", None),
+            "photometric_interpretation": photo,
         }
         return img, metadata
     except Exception as e:
-        # Gracefully handle corrupted files
-        print(f"[Warning] Failed to read DICOM file {path}: {e}")
+        print(f"[Warning] Failed to read DICOM source: {e}")
         return None, None
 
 

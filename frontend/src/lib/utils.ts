@@ -26,10 +26,13 @@ export function resolveImageUrl(path?: string): string | undefined {
   if (path.startsWith("data:") || path.startsWith("blob:") || path.startsWith("http://") || path.startsWith("https://")) {
     return path;
   }
-  const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:3001";
+  const isBrowser = typeof window !== "undefined";
+  const isLocalhost = isBrowser && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+  const fallbackUrl = isLocalhost ? "http://localhost:3001" : "https://q-knee-api-jqnj.onrender.com";
+  const baseUrl = import.meta.env.VITE_API_URL || fallbackUrl;
   const cleanBase = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  const token = typeof localStorage !== "undefined" ? localStorage.getItem("hqml_token") : null;
+  const token = isBrowser ? localStorage.getItem("hqml_token") : null;
   if (token) {
     const separator = cleanPath.includes("?") ? "&" : "?";
     return `${cleanBase}${cleanPath}${separator}token=${encodeURIComponent(token)}`;

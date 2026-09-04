@@ -97,10 +97,40 @@ router.get('/:id/slice/:sliceIdx', authenticate, async (req: AuthRequest, res: R
     if (studyResult.rows.length === 0) {
       studyResult = await pool.query('SELECT * FROM studies WHERE id = $1', [req.params.id]);
     }
-    if (studyResult.rows.length === 0) { res.status(404).json({ error: 'Study not found' }); return; }
+    if (studyResult.rows.length === 0) {
+      console.warn(`[Diagnostic] Slice preview 404: Study ${req.params.id} not found`);
+      res.status(404).json({ error: 'Study not found' });
+      return;
+    }
     const study = studyResult.rows[0];
+    const sliceIdx = Math.max(0, parseInt(req.params.sliceIdx || '0', 10));
 
-    const sliceIdx = parseInt(req.params.sliceIdx || '0', 10);
+    const meta = typeof study.metadata === 'string' ? JSON.parse(study.metadata || '{}') : (study.metadata || {});
+
+    // 1. Check if slice PNG already exists on disk
+    const diskPngPath = path.resolve(uploadDir, `${study.id}_slice_${sliceIdx}.png`);
+    if (fs.existsSync(diskPngPath)) {
+      console.log(`[Diagnostic] Serving cached PNG for study=${study.id}, slice=${sliceIdx}`);
+      res.set('Content-Type', 'image/png');
+      res.set('Cache-Control', 'public, max-age=86400');
+      res.sendFile(diskPngPath);
+      return;
+    }
+
+    // 2. Check if metadata has cached base64 preview
+    const cachedB64 = (sliceIdx === 0 && meta.preview_b64) ? meta.preview_b64 : meta.slice_previews?.[sliceIdx];
+    if (cachedB64) {
+      const cleanB64 = cachedB64.includes(',') ? cachedB64.split(',')[1] : cachedB64;
+      const pngBuf = Buffer.from(cleanB64, 'base64');
+      try { fs.writeFileSync(diskPngPath, pngBuf); } catch {}
+      console.log(`[Diagnostic] Serving metadata preview_b64 for study=${study.id}, slice=${sliceIdx}`);
+      res.set('Content-Type', 'image/png');
+      res.set('Cache-Control', 'public, max-age=86400');
+      res.send(pngBuf);
+      return;
+    }
+
+    // 3. Extract file paths associated with the study
     let filePaths: string[] = [];
     try {
       filePaths = typeof study.storage_reference === 'string' ? JSON.parse(study.storage_reference || '[]') : (study.storage_reference || []);
@@ -114,36 +144,63 @@ router.get('/:id/slice/:sliceIdx', authenticate, async (req: AuthRequest, res: R
 
     const mlUrl = process.env.ML_SERVICE_URL || 'http://localhost:8000';
 
-    if (filePaths.length > 0) {
+    // 4. If local file exists on disk, read file buffer and send to /preview/buffer
+    const targetFilePath = filePaths[sliceIdx] || filePaths[0];
+    if (targetFilePath && fs.existsSync(targetFilePath)) {
       try {
-        const mlRes = await axios.post(`${mlUrl}/preview/slice`, {
+        const fileBuf = fs.readFileSync(targetFilePath);
+        const mlRes = await axios.post(`${mlUrl}/preview/buffer`, {
           study_id: study.id,
-          file_paths: filePaths,
+          file_b64: fileBuf.toString('base64'),
           slice_idx: sliceIdx,
         }, { responseType: 'arraybuffer', timeout: 30000 });
 
+        const pngData = Buffer.from(mlRes.data);
+        try { fs.writeFileSync(diskPngPath, pngData); } catch {}
+        console.log(`[Diagnostic] Successfully generated PNG via ML buffer for study=${study.id}, slice=${sliceIdx}`);
         res.set('Content-Type', 'image/png');
         res.set('Cache-Control', 'public, max-age=86400');
-        res.send(Buffer.from(mlRes.data));
+        res.send(pngData);
         return;
-      } catch (mlErr: any) {
-        // Fallback to sample preview if ML preview failed
+      } catch (bufErr: any) {
+        console.warn(`[Diagnostic] ML buffer preview error: ${bufErr.message}`);
       }
     }
 
+    // 5. Fallback: try standard /preview/slice or sample slice from ML service
     try {
-      const sampleRes = await axios.get(`${mlUrl}/preview/sample/${study.id}/${sliceIdx}`, {
-        responseType: 'arraybuffer',
-        timeout: 10000,
-      });
+      const mlRes = await axios.post(`${mlUrl}/preview/slice`, {
+        study_id: study.id,
+        file_paths: filePaths,
+        slice_idx: sliceIdx,
+      }, { responseType: 'arraybuffer', timeout: 30000 });
+
+      const pngData = Buffer.from(mlRes.data);
+      try { fs.writeFileSync(diskPngPath, pngData); } catch {}
+      console.log(`[Diagnostic] Successfully generated PNG via ML slice for study=${study.id}, slice=${sliceIdx}`);
       res.set('Content-Type', 'image/png');
       res.set('Cache-Control', 'public, max-age=86400');
-      res.send(Buffer.from(sampleRes.data));
+      res.send(pngData);
       return;
-    } catch {
-      res.status(404).json({ error: 'Slice image unavailable' });
+    } catch (mlErr: any) {
+      // Try sample preview endpoint
+      try {
+        const sampleRes = await axios.get(`${mlUrl}/preview/sample/${study.id}/${sliceIdx}`, {
+          responseType: 'arraybuffer',
+          timeout: 10000,
+        });
+        const pngData = Buffer.from(sampleRes.data);
+        try { fs.writeFileSync(diskPngPath, pngData); } catch {}
+        res.set('Content-Type', 'image/png');
+        res.set('Cache-Control', 'public, max-age=86400');
+        res.send(pngData);
+        return;
+      } catch {
+        res.status(404).json({ error: 'Slice image unavailable' });
+      }
     }
-  } catch (err) {
+  } catch (err: any) {
+    console.error(`[Diagnostic] Slice preview internal error:`, err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -151,7 +208,6 @@ router.get('/:id/slice/:sliceIdx', authenticate, async (req: AuthRequest, res: R
 // Get predictions for a study
 router.get('/:id/predictions', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    // Verify ownership
     const study = await pool.query('SELECT id FROM studies WHERE id = $1 AND user_id = $2', [req.params.id, req.user!.id]);
     if (study.rows.length === 0) { res.status(404).json({ error: 'Study not found' }); return; }
     const result = await pool.query('SELECT * FROM predictions WHERE study_id = $1 ORDER BY created_at DESC', [req.params.id]);
@@ -172,6 +228,8 @@ router.post('/upload', authenticate, upload.array('files'), async (req: AuthRequ
       file_count: files.length,
       filenames: files.map(f => f.originalname),
       sizes: files.map(f => f.size),
+      slice_count: files.length,
+      has_3d_volume: files.length > 3,
     };
 
     // Determine mode based on file types (DICOM / NPY -> REAL)
@@ -181,16 +239,38 @@ router.post('/upload', authenticate, upload.array('files'), async (req: AuthRequ
     });
     const mode = hasRealMri ? 'REAL' : 'DEMO';
 
-    // Create study in DB with 'processing' status
+    // Immediately attempt to generate and cache PNG preview for slice 0
+    const mlUrl = process.env.ML_SERVICE_URL || 'http://localhost:8000';
+    try {
+      if (files[0] && fs.existsSync(files[0].path)) {
+        const firstFileBuf = fs.readFileSync(files[0].path);
+        const previewRes = await axios.post(`${mlUrl}/preview/buffer`, {
+          study_id: studyId,
+          file_b64: firstFileBuf.toString('base64'),
+          slice_idx: 0,
+        }, { responseType: 'arraybuffer', timeout: 15000 });
+
+        if (previewRes.data) {
+          const previewBuf = Buffer.from(previewRes.data);
+          const previewPngPath = path.resolve(uploadDir, `${studyId}_slice_0.png`);
+          fs.writeFileSync(previewPngPath, previewBuf);
+          metadata.preview_b64 = `data:image/png;base64,${previewBuf.toString('base64')}`;
+          console.log(`[Diagnostic] Generated upload-time preview PNG for study=${studyId}`);
+        }
+      }
+    } catch (prevErr: any) {
+      console.warn(`[Diagnostic] Upload preview pre-render note: ${prevErr.message}`);
+    }
+
+    // Create study in DB with 'ready' or 'processing' status
     const result = await pool.query(
       `INSERT INTO studies (user_id, study_instance_uid, original_filename, storage_reference, status, mode, metadata)
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [req.user!.id, studyId, files[0].originalname, JSON.stringify(filePaths), 'processing', mode, JSON.stringify(metadata)]
+      [req.user!.id, studyId, files[0].originalname, JSON.stringify(filePaths), 'ready', mode, JSON.stringify(metadata)]
     );
     const study = result.rows[0];
 
-    // Process with ML service (single source of truth for volume parsing & validation)
-    const mlUrl = process.env.ML_SERVICE_URL || 'http://localhost:8000';
+    // Asynchronously notify ML service for deep volume parsing & metrics if needed
     axios.post(`${mlUrl}/process`, { study_id: study.id, file_paths: filePaths, mode }, { timeout: 30000 })
       .then(async (mlRes) => {
         const mlData = mlRes.data || {};
@@ -200,9 +280,8 @@ router.post('/upload', authenticate, upload.array('files'), async (req: AuthRequ
           [mlData.status === 'error' ? 'error' : 'ready', JSON.stringify(updatedMeta), study.id]
         );
       })
-      .catch(async (err) => {
-        console.error('ML processing notification:', err.message);
-        await pool.query("UPDATE studies SET status = 'ready', updated_at = NOW() WHERE id = $1", [study.id]);
+      .catch((err) => {
+        console.error('ML processing background notification:', err.message);
       });
 
     res.status(201).json({ study });

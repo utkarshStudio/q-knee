@@ -202,7 +202,13 @@ export function MriViewer({
             <img
               src={activeImageUrl}
               alt={`MRI Slice ${sliceIndex + 1} - ${viewMode}`}
-              onError={() => setImageLoadError(true)}
+              onLoad={() => {
+                console.log("[MriViewer] DICOM PREVIEW LOADED:", activeImageUrl);
+              }}
+              onError={(e) => {
+                console.error("[MriViewer] DICOM PREVIEW FAILED:", activeImageUrl, e);
+                setImageLoadError(true);
+              }}
               className="w-full h-full object-contain transition-all duration-150"
               style={{
                 filter: `brightness(${brightness}%) contrast(${contrast}%)`,
@@ -217,16 +223,37 @@ export function MriViewer({
             )}
           </>
         ) : (
-          <div className="flex flex-col items-center gap-2 p-6 text-center text-slate-500">
-            <svg className="w-12 h-12 stroke-current opacity-30" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="1.5" />
-              <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
-              <path d="M21 15l-5-5L5 21" strokeWidth="1.5" />
-            </svg>
-            <p className="text-sm font-medium">No MRI image slice loaded</p>
-            <p className="text-xs text-slate-600">
-              {imageLoadError ? "Failed to render DICOM image format." : "Upload a study or select a valid slice index."}
-            </p>
+          <div className="flex flex-col items-center gap-2 p-6 text-center text-slate-400">
+            {imageLoadError ? (
+              <>
+                <div className="w-10 h-10 rounded-full bg-red-900/40 border border-red-500/50 flex items-center justify-center text-red-400 mb-1">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <p className="text-sm font-semibold text-slate-200">Unable to load DICOM preview</p>
+                <p className="text-xs text-slate-400 max-w-xs">
+                  The slice image could not be fetched or rendered. Check network connectivity or re-upload the series.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setImageLoadError(false)}
+                  className="mt-2 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded border border-slate-700 transition-colors"
+                >
+                  Retry Loading
+                </button>
+              </>
+            ) : (
+              <>
+                <svg className="w-12 h-12 stroke-current opacity-30" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="1.5" />
+                  <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+                  <path d="M21 15l-5-5L5 21" strokeWidth="1.5" />
+                </svg>
+                <p className="text-sm font-medium">No MRI image slice loaded</p>
+                <p className="text-xs text-slate-600">Upload a study or select a valid slice index.</p>
+              </>
+            )}
           </div>
         )}
 

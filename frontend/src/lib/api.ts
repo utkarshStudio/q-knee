@@ -1,7 +1,9 @@
 /// <reference types="vite/client" />
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const isBrowser = typeof window !== 'undefined';
+const isLocalhost = isBrowser && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const API_URL = import.meta.env.VITE_API_URL || (isLocalhost ? 'http://localhost:3001' : 'https://q-knee-api-jqnj.onrender.com');
 
 export const api = axios.create({
   baseURL: API_URL,
