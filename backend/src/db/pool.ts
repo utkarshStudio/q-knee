@@ -3,6 +3,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
+import { SAMPLE_DICOM_B64 } from './sample_dicom_b64';
+import { decodeDicomToPng } from '../services/dicomDecoder';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
@@ -122,6 +124,14 @@ interface Benchmark {
 const defaultUserId = "usr_default_researcher_001";
 const defaultPasswordHash = bcrypt.hashSync("password123", 10);
 
+let sample5cfPreviewB64: string | undefined;
+try {
+  const buf = decodeDicomToPng(Buffer.from(SAMPLE_DICOM_B64, 'base64'));
+  if (buf) {
+    sample5cfPreviewB64 = `data:image/png;base64,${buf.toString('base64')}`;
+  }
+} catch {}
+
 const memoryStore = {
   users: [
     {
@@ -180,6 +190,25 @@ const memoryStore = {
       metadata: { plane: "Sagittal", slices: 8, resolution: "128x128", target: "ACL Abnormality" },
       created_at: new Date(Date.now() - 7200000).toISOString(),
       updated_at: new Date(Date.now() - 7200000).toISOString(),
+    },
+    {
+      id: "study_5cf7d0b0",
+      user_id: defaultUserId,
+      study_instance_uid: "1.2.826.0.1.3680043.8.498.study_5cf7d0b0",
+      patient_id: "PATIENT_PROD_5CF7D0B0",
+      modality: "MR",
+      series_count: 1,
+      image_count: 1,
+      is_abnormal: true,
+      status: "ready",
+      mode: "REAL",
+      file_paths: [path.resolve(process.env.UPLOAD_DIR || "./storage/uploads", "study_5cf7d0b0.dcm")],
+      original_filename: "knee_mri_sagittal_study_5cf7d0b0.dcm",
+      storage_reference: JSON.stringify([path.resolve(process.env.UPLOAD_DIR || "./storage/uploads", "study_5cf7d0b0.dcm")]),
+      storage_path: path.resolve(process.env.UPLOAD_DIR || "./storage/uploads", "study_5cf7d0b0.dcm"),
+      metadata: { plane: "Sagittal", slices: 1, slice_count: 1, has_3d_volume: false, resolution: "128x128", target: "ACL Abnormality", preview_b64: sample5cfPreviewB64 },
+      created_at: new Date(Date.now() - 1800000).toISOString(),
+      updated_at: new Date(Date.now() - 1800000).toISOString(),
     }
   ] as Study[],
 

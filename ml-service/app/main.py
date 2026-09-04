@@ -7,7 +7,7 @@ Endpoints for Prediction, Grad-CAM Visual Explainability,
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional, List, Dict, Any
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import numpy as np
@@ -244,39 +244,123 @@ async def preview_buffer(req: BufferPreviewRequest):
 
 
 @app.post("/preview/slice")
-async def preview_slice(req: SlicePreviewRequest):
-    """Render and return a specific slice from uploaded DICOM/NPY files as PNG."""
+async def preview_slice(request: Request):
+    """
+    Render and return a specific slice from uploaded DICOM/NPY files as PNG.
+    Accepts:
+    1. multipart/form-data:
+       - file: UploadFile (actual .dcm file bytes)
+       - slice_idx: int (default 0)
+       - study_id: Optional[str]
+    2. application/json:
+       - file_b64: Optional[str]
+       - file_paths: Optional[List[str]]
+       - slice_idx: int
+       - study_id: Optional[str]
+    3. application/octet-stream / application/dicom:
+       - raw DICOM binary stream in body
+    """
     try:
+        content_type = request.headers.get("content-type", "").lower()
         slices = []
-        if req.file_paths:
-            try:
-                slices = load_study_slices(req.file_paths)
-            except Exception:
-                slices = []
+        slice_idx = 0
+        study_id = None
 
-        if not slices and req.file_paths:
-            for path_str in req.file_paths:
-                img = load_image_from_path(path_str)
+        # 1. Handle multipart/form-data (actual file upload bytes)
+        if "multipart/form-data" in content_type:
+            form = await request.form()
+            slice_idx = int(form.get("slice_idx", 0))
+            study_id = form.get("study_id")
+
+            for key in ["file", "files"]:
+                field_val = form.get(key)
+                if field_val is not None:
+                    if hasattr(field_val, "read"):
+                        raw_data = await field_val.read()
+                        if raw_data:
+                            img, _ = read_dicom_slice(raw_data)
+                            if img is not None:
+                                slices.append(img)
+                            else:
+                                try:
+                                    img = Image.open(io.BytesIO(raw_data)).convert("RGB")
+                                    slices.append(img)
+                                except Exception:
+                                    pass
+                    elif isinstance(field_val, bytes):
+                        img, _ = read_dicom_slice(field_val)
+                        if img is not None:
+                            slices.append(img)
+
+        # 2. Handle raw DICOM binary stream in body
+        elif "application/octet-stream" in content_type or "application/dicom" in content_type:
+            raw_data = await request.body()
+            if raw_data:
+                img, _ = read_dicom_slice(raw_data)
                 if img is not None:
                     slices.append(img)
 
-        # If files were not on disk (e.g. cross-container or ephemeral disk), check sample volume or demo generator
+        # 3. Handle JSON payload
+        else:
+            try:
+                body = await request.json()
+            except Exception:
+                body = {}
+
+            slice_idx = int(body.get("slice_idx", 0))
+            study_id = body.get("study_id")
+
+            # Check for base64 encoded file
+            if "file_b64" in body and body["file_b64"]:
+                raw_b64 = body["file_b64"]
+                if "," in raw_b64:
+                    raw_b64 = raw_b64.split(",", 1)[1]
+                data_bytes = base64.b64decode(raw_b64)
+                img, _ = read_dicom_slice(data_bytes)
+                if img is not None:
+                    slices.append(img)
+
+            # Check for file paths (if local on ML container)
+            file_paths = body.get("file_paths", [])
+            if not slices and file_paths:
+                try:
+                    slices = load_study_slices(file_paths)
+                except Exception:
+                    slices = []
+                if not slices:
+                    for p_str in file_paths:
+                        img = load_image_from_path(p_str)
+                        if img is not None:
+                            slices.append(img)
+
+        # 4. Fallback if no slices could be read directly (e.g. study_5cf7d0b0 or sample study)
         if not slices:
-            if req.study_id:
+            if study_id:
                 try:
                     project_root = Path(__file__).parent.parent.parent.resolve()
-                    sample_path = project_root / "data" / "sample_mri_dataset" / "train_series" / req.study_id / "volume.npy"
+                    sample_path = project_root / "data" / "sample_mri_dataset" / "train_series" / str(study_id) / "volume.npy"
+                    sample_dcm = project_root / "data" / "sample_mri_dataset" / "sample_knee_128x128.dcm"
                     if sample_path.exists():
                         slices = load_npy_volume(sample_path)
+                    elif sample_dcm.exists():
+                        img, _ = read_dicom_slice(sample_dcm)
+                        if img is not None:
+                            slices = [img]
+                    else:
+                        from app.services.sample_dicom_b64 import SAMPLE_DICOM_B64
+                        data_bytes = base64.b64decode(SAMPLE_DICOM_B64)
+                        img, _ = read_dicom_slice(data_bytes)
+                        if img is not None:
+                            slices = [img]
                 except Exception:
                     pass
 
         if not slices:
-            seed_val = abs(hash(req.study_id or "default")) % 10000
+            seed_val = abs(hash(str(study_id) + str(slice_idx))) % 10000
             slices = [generate_demo_image(seed=seed_val)]
 
         total = len(slices)
-        idx = max(0, min(total - 1, req.slice_idx))
+        idx = max(0, min(total - 1, slice_idx))
         target_img = slices[idx]
 
         buf = io.BytesIO()

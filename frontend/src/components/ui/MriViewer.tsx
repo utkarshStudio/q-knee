@@ -82,6 +82,12 @@ export function MriViewer({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
+  useEffect(() => {
+    if (originalImageUrl) {
+      console.log("DICOM PREVIEW URL:", originalImageUrl);
+    }
+  }, [originalImageUrl]);
+
   const hasCam = Boolean(
     viewMode === "heatmap" ? heatmapImageUrl : viewMode === "overlay" ? overlayImageUrl : false
   );
@@ -203,10 +209,10 @@ export function MriViewer({
               src={activeImageUrl}
               alt={`MRI Slice ${sliceIndex + 1} - ${viewMode}`}
               onLoad={() => {
-                console.log("[MriViewer] DICOM PREVIEW LOADED:", activeImageUrl);
+                console.log("DICOM PREVIEW LOADED");
               }}
-              onError={(e) => {
-                console.error("[MriViewer] DICOM PREVIEW FAILED:", activeImageUrl, e);
+              onError={(event) => {
+                console.error("DICOM PREVIEW FAILED", event);
                 setImageLoadError(true);
               }}
               className="w-full h-full object-contain transition-all duration-150"
