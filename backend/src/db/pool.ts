@@ -48,7 +48,8 @@ interface User {
 
 interface Study {
   id: string | number;
-  user_id: string | number;
+  user_id?: string | number | null;
+  guest_session_id?: string | null;
   study_instance_uid: string;
   original_filename: string;
   storage_reference?: string;
