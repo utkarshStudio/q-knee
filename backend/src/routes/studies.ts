@@ -131,20 +131,27 @@ router.get('/:id/slice/:sliceIdx', optionalAuthenticate, async (req: AuthRequest
     // 1. Check if slice PNG already exists on disk
     const diskPngPath = path.resolve(uploadDir, `${study.id}_slice_${sliceIdx}_${plane}.png`);
     if (fs.existsSync(diskPngPath)) {
-      console.log(`[Diagnostic] Serving cached PNG for study=${study.id}, slice=${sliceIdx}, plane=${plane}`);
       res.set('Content-Type', 'image/png');
       res.set('Cache-Control', 'public, max-age=86400');
       res.sendFile(diskPngPath);
       return;
     }
 
-    // 2. Check if metadata has cached base64 preview (axial only for now)
-    const cachedB64 = (sliceIdx === 0 && plane === 'axial' && meta.preview_b64) ? meta.preview_b64 : (plane === 'axial' ? meta.slice_previews?.[sliceIdx] : null);
+    // 1b. Check if baseline slice 0 PNG exists
+    const fallback0Png = path.resolve(uploadDir, `${study.id}_slice_0.png`);
+    if (fs.existsSync(fallback0Png) && (sliceIdx === 0 || !study.has_3d_volume)) {
+      res.set('Content-Type', 'image/png');
+      res.set('Cache-Control', 'public, max-age=86400');
+      res.sendFile(fallback0Png);
+      return;
+    }
+
+    // 2. Check if metadata has cached base64 preview
+    const cachedB64 = (sliceIdx === 0 && meta.preview_b64) ? meta.preview_b64 : meta.slice_previews?.[sliceIdx];
     if (cachedB64) {
       const cleanB64 = cachedB64.includes(',') ? cachedB64.split(',')[1] : cachedB64;
       const pngBuf = Buffer.from(cleanB64, 'base64');
       try { fs.writeFileSync(diskPngPath, pngBuf); } catch {}
-      console.log(`[Diagnostic] Serving metadata preview_b64 for study=${study.id}, slice=${sliceIdx}, plane=${plane}`);
       res.set('Content-Type', 'image/png');
       res.set('Cache-Control', 'public, max-age=86400');
       res.send(pngBuf);
@@ -165,50 +172,76 @@ router.get('/:id/slice/:sliceIdx', optionalAuthenticate, async (req: AuthRequest
 
     const mlUrl = process.env.ML_SERVICE_URL || 'http://localhost:8000';
 
-    // 4. Locate uploaded file on disk and send actual bytes via multipart/form-data
+    // 4. Locate uploaded file on disk
     let targetFilePath = filePaths[sliceIdx] || filePaths[0];
 
     if (targetFilePath && fs.existsSync(targetFilePath)) {
-      try {
-        const fileBuf = fs.readFileSync(targetFilePath);
+      const ext = path.extname(targetFilePath).toLowerCase();
 
-        // 4a. Direct pure-Node DICOM decoding on Backend (fast, zero cross-service dependency)
-        if (targetFilePath.toLowerCase().endsWith('.dcm') && plane === 'axial') {
-          const localPng = decodeDicomToPng(fileBuf);
-          if (localPng) {
-            try { fs.writeFileSync(diskPngPath, localPng); } catch {}
-            console.log(`[Diagnostic] Successfully decoded DICOM to PNG directly on Backend for study=${study.id}, slice=${sliceIdx}, plane=${plane}`);
-            res.set('Content-Type', 'image/png');
-            res.set('Cache-Control', 'public, max-age=86400');
-            res.send(localPng);
-            return;
+      // 4a. Standard 2D image formats (PNG, JPEG, BMP, WebP)
+      if (['.png', '.jpg', '.jpeg', '.bmp', '.webp'].includes(ext)) {
+        const mimeType = (ext === '.jpg' || ext === '.jpeg') ? 'image/jpeg' : `image/${ext.replace('.', '')}`;
+        res.set('Content-Type', mimeType);
+        res.set('Cache-Control', 'public, max-age=86400');
+        res.sendFile(path.resolve(targetFilePath));
+        return;
+      }
+
+      // 4b. Pure Node DICOM decoding on Backend
+      let fileBuf: Buffer | null = null;
+      try {
+        fileBuf = fs.readFileSync(targetFilePath);
+      } catch {}
+
+      if (fileBuf && (ext === '.dcm' || ext === '.dicom')) {
+        const isMultiframe = study.has_3d_volume && filePaths.length <= 1;
+        const localPng = decodeDicomToPng(fileBuf, isMultiframe ? sliceIdx : 0);
+        // If single image or axial or ML service is unavailable, serve local PNG directly
+        if (localPng && (!study.has_3d_volume || filePaths.length <= 1 || plane === 'axial')) {
+          try { fs.writeFileSync(diskPngPath, localPng); } catch {}
+          res.set('Content-Type', 'image/png');
+          res.set('Cache-Control', 'public, max-age=86400');
+          res.send(localPng);
+          return;
+        }
+      }
+
+      // 4c. Stream multipart to ML service for 3D multi-plane reslicing
+      if (fileBuf) {
+        try {
+          const formData = new FormData();
+          const blob = new Blob([fileBuf], { type: 'application/octet-stream' });
+          formData.append('file', blob, path.basename(targetFilePath));
+          formData.append('slice_idx', String(sliceIdx));
+          formData.append('study_id', study.id);
+          formData.append('plane', plane);
+
+          const mlRes = await axios.post(`${mlUrl}/preview/slice`, formData, {
+            responseType: 'arraybuffer',
+            timeout: 10000,
+          });
+
+          const pngData = Buffer.from(mlRes.data);
+          try { fs.writeFileSync(diskPngPath, pngData); } catch {}
+          res.set('Content-Type', 'image/png');
+          res.set('Cache-Control', 'public, max-age=86400');
+          res.send(pngData);
+          return;
+        } catch (bufErr: any) {
+          console.warn(`[Diagnostic] ML multipart preview error: ${bufErr.message}`);
+          // Graceful fallback: If ML fails but we have a DICOM slice, decode directly
+          if (ext === '.dcm' || ext === '.dicom') {
+            const isMultiframe = study.has_3d_volume && filePaths.length <= 1;
+            const localPng = decodeDicomToPng(fileBuf, isMultiframe ? sliceIdx : 0);
+            if (localPng) {
+              try { fs.writeFileSync(diskPngPath, localPng); } catch {}
+              res.set('Content-Type', 'image/png');
+              res.set('Cache-Control', 'public, max-age=86400');
+              res.send(localPng);
+              return;
+            }
           }
         }
-
-        // 4b. Stream multipart/form-data with actual file bytes to ML service
-        console.log(`[Diagnostic] Read ${fileBuf.length} bytes from ${targetFilePath}, sending multipart to ML...`);
-
-        const formData = new FormData();
-        const blob = new Blob([fileBuf], { type: 'application/dicom' });
-        formData.append('file', blob, path.basename(targetFilePath));
-        formData.append('slice_idx', String(sliceIdx));
-        formData.append('study_id', study.id);
-        formData.append('plane', plane);
-
-        const mlRes = await axios.post(`${mlUrl}/preview/slice`, formData, {
-          responseType: 'arraybuffer',
-          timeout: 30000,
-        });
-
-        const pngData = Buffer.from(mlRes.data);
-        try { fs.writeFileSync(diskPngPath, pngData); } catch {}
-        console.log(`[Diagnostic] Successfully received and cached PNG from ML multipart for study=${study.id}, slice=${sliceIdx}, plane=${plane}`);
-        res.set('Content-Type', 'image/png');
-        res.set('Cache-Control', 'public, max-age=86400');
-        res.send(pngData);
-        return;
-      } catch (bufErr: any) {
-        console.warn(`[Diagnostic] ML multipart preview error: ${bufErr.message}`);
       }
     }
 
@@ -218,17 +251,23 @@ router.get('/:id/slice/:sliceIdx', optionalAuthenticate, async (req: AuthRequest
         study_id: study.id,
         slice_idx: sliceIdx,
         plane: plane,
-      }, { responseType: 'arraybuffer', timeout: 15000 });
+        file_paths: filePaths
+      }, { responseType: 'arraybuffer', timeout: 5000 });
 
       const pngData = Buffer.from(mlRes.data);
       try { fs.writeFileSync(diskPngPath, pngData); } catch {}
-      console.log(`[Diagnostic] Successfully generated PNG via ML fallback for study=${study.id}, slice=${sliceIdx}, plane=${plane}`);
       res.set('Content-Type', 'image/png');
       res.set('Cache-Control', 'public, max-age=86400');
       res.send(pngData);
       return;
     } catch (mlErr: any) {
-      console.warn(`[Diagnostic] Slice preview ML error:`, mlErr.message);
+      // Last resort: check if any preview for this study exists on disk
+      if (fs.existsSync(fallback0Png)) {
+        res.set('Content-Type', 'image/png');
+        res.set('Cache-Control', 'public, max-age=86400');
+        res.sendFile(fallback0Png);
+        return;
+      }
       res.status(422).json({ error: 'Unable to process uploaded MRI volume slice' });
       return;
     }

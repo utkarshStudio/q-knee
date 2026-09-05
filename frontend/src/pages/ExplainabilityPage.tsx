@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+﻿import { useEffect, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import AppLayout from "../components/layout/AppLayout";
 import api from "../lib/api";
@@ -51,7 +51,7 @@ export default function ExplainabilityPage() {
       <AppLayout>
         <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
           <RefreshCw className="w-8 h-8 text-quantum-500 animate-spin" />
-          <p className="text-sm font-mono text-graphite-400 uppercase tracking-widest">Loading Explainability Data...</p>
+          <p className="text-sm font-mono text-text-muted uppercase tracking-widest">Loading Explainability Data...</p>
         </div>
       </AppLayout>
     );
@@ -76,10 +76,10 @@ export default function ExplainabilityPage() {
                 <ArrowLeft className="w-3.5 h-3.5" /> Back to Study
               </Link>
             )}
-            <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+            <h1 className="text-2xl md:text-3xl font-bold text-text-primary tracking-tight flex items-center gap-3">
               Explainable AI (XAI) Dashboard
             </h1>
-            <p className="text-graphite-400 text-sm max-w-2xl">
+            <p className="text-text-muted text-sm max-w-2xl">
               Multi-level interpretability combining visual Grad-CAM spatial attention with quantitative 4D latent feature attributions (Taylor gradients).
             </p>
           </div>
@@ -97,45 +97,45 @@ export default function ExplainabilityPage() {
 
         {/* Conceptual Distinction Banner */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="card p-5 bg-gradient-to-br from-clinical-950/40 to-graphite-900/50 border-clinical-900/50">
+          <div className="card p-5 bg-gradient-to-br from-clinical-950/20/40 to-bg-panel/50 border-clinical-900/50">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-clinical-400 mb-2">
               <Eye className="w-4 h-4" /> Level 1: Visual Attention
             </div>
-            <h4 className="text-sm font-bold text-white mb-1">ResNet18 Grad-CAM</h4>
-            <p className="text-xs text-graphite-400 leading-relaxed">
+            <h4 className="text-sm font-bold text-text-primary mb-1">ResNet18 Grad-CAM</h4>
+            <p className="text-xs text-text-muted leading-relaxed">
               Highlights 2D spatial regions with highest convolutional activation in the structural MRI slice.
             </p>
           </div>
           
-          <div className="card p-5 bg-gradient-to-br from-purple-950/30 to-graphite-900/50 border-purple-900/40">
+          <div className="card p-5 bg-gradient-to-br from-quantum-900/20/30 to-bg-panel/50 border-purple-900/40">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-purple-400 mb-2">
               <AlignLeft className="w-4 h-4" /> Level 2: Feature Attribution
             </div>
-            <h4 className="text-sm font-bold text-white mb-1">4D PCA Decomposition</h4>
-            <p className="text-xs text-graphite-400 leading-relaxed">
+            <h4 className="text-sm font-bold text-text-primary mb-1">4D PCA Decomposition</h4>
+            <p className="text-xs text-text-muted leading-relaxed">
               Signed sensitivity analysis showing how each principal component influenced the classifier boundary.
             </p>
           </div>
           
-          <div className="card p-5 bg-gradient-to-br from-emerald-950/30 to-graphite-900/50 border-emerald-900/40">
+          <div className="card p-5 bg-gradient-to-br from-emerald-900/20/30 to-bg-panel/50 border-emerald-900/40">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-400 mb-2">
               <Target className="w-4 h-4" /> Level 3: Classification
             </div>
-            <h4 className="text-sm font-bold text-white mb-1">Risk & Probability</h4>
-            <p className="text-xs text-graphite-400 leading-relaxed">
+            <h4 className="text-sm font-bold text-text-primary mb-1">Risk & Probability</h4>
+            <p className="text-xs text-text-muted leading-relaxed">
               Final decision from the {isQuantum ? 'quantum' : 'classical'} classifier with calibrated probabilistic confidence.
             </p>
           </div>
         </div>
 
         {error && !data && (
-          <div className="card p-12 bg-graphite-900/50 border-graphite-800 flex flex-col items-center text-center space-y-6">
+          <div className="card p-12 bg-bg-panel/50 border-border-subtle flex flex-col items-center text-center space-y-6">
             <div className="w-16 h-16 rounded-full bg-red-950/50 border border-red-900/50 flex items-center justify-center text-red-500">
               <ServerCrash className="w-8 h-8" />
             </div>
             <div>
-              <p className="text-white font-bold text-lg mb-2">XAI Generation Failed</p>
-              <p className="text-graphite-400 text-sm max-w-md mx-auto">{error}</p>
+              <p className="text-text-primary font-bold text-lg mb-2">XAI Generation Failed</p>
+              <p className="text-text-muted text-sm max-w-md mx-auto">{error}</p>
             </div>
             <button onClick={generate} disabled={generating} className="btn-primary mt-2">
               {generating ? <><RefreshCw className="w-4 h-4 animate-spin" /> Computing Grad-CAM & Attributions...</> : <><RefreshCw className="w-4 h-4" /> Generate Explanation</>}
@@ -148,41 +148,41 @@ export default function ExplainabilityPage() {
             
             {/* Prediction Summary Header */}
             {data.prediction && (
-              <div className="card p-6 relative overflow-hidden bg-graphite-900/80">
+              <div className="card p-6 relative overflow-hidden bg-bg-panel/80">
                 <div className={`absolute -right-20 -top-20 w-64 h-64 rounded-full blur-[80px] opacity-20 pointer-events-none ${
                   isAbnormal ? "bg-amber-500" : "bg-emerald-500"
                 }`}></div>
                 
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 relative z-10 border-b border-graphite-800 pb-4">
-                  <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 relative z-10 border-b border-border-subtle pb-4">
+                  <h2 className="text-sm font-bold text-text-primary uppercase tracking-wider flex items-center gap-2">
                     <Brain className="w-4 h-4 text-clinical-400" /> Reference Inference Record
                   </h2>
                   <ModeBadge mode={data.prediction.mode} />
                 </div>
                 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
-                  <div className="bg-graphite-950/50 rounded-xl p-4 border border-graphite-800">
-                    <div className="text-[10px] text-graphite-500 uppercase tracking-widest mb-1.5">Diagnosis</div>
+                  <div className="bg-bg-base/50 rounded-xl p-4 border border-border-subtle">
+                    <div className="text-[10px] text-text-muted uppercase tracking-widest mb-1.5">Diagnosis</div>
                     <div className={`text-lg font-bold tracking-tight ${isAbnormal ? "text-amber-400" : "text-emerald-400"}`}>
                       {isAbnormal ? "Abnormality Detected" : "Normal Study"}
                     </div>
                   </div>
-                  <div className="bg-graphite-950/50 rounded-xl p-4 border border-graphite-800">
-                    <div className="text-[10px] text-graphite-500 uppercase tracking-widest mb-1.5">p(Abnormal)</div>
-                    <div className="text-xl font-bold font-mono text-white">
+                  <div className="bg-bg-base/50 rounded-xl p-4 border border-border-subtle">
+                    <div className="text-[10px] text-text-muted uppercase tracking-widest mb-1.5">p(Abnormal)</div>
+                    <div className="text-xl font-bold font-mono text-text-primary">
                       {formatPercent(data.prediction.abnormal_probability)}
                     </div>
                   </div>
-                  <div className="bg-graphite-950/50 rounded-xl p-4 border border-graphite-800">
-                    <div className="text-[10px] text-graphite-500 uppercase tracking-widest mb-1.5">Model Confidence</div>
+                  <div className="bg-bg-base/50 rounded-xl p-4 border border-border-subtle">
+                    <div className="text-[10px] text-text-muted uppercase tracking-widest mb-1.5">Model Confidence</div>
                     <div className="text-xl font-bold font-mono text-clinical-400">
                       {formatPercent(data.prediction.confidence)}
                     </div>
                   </div>
-                  <div className="bg-graphite-950/50 rounded-xl p-4 border border-graphite-800">
-                    <div className="text-[10px] text-graphite-500 uppercase tracking-widest mb-1.5">Architecture</div>
-                    <div className="text-sm font-bold text-white mt-1 flex items-center gap-2">
-                      {isQuantum ? <Cpu className="w-4 h-4 text-quantum-400" /> : <Layers className="w-4 h-4 text-graphite-400" />}
+                  <div className="bg-bg-base/50 rounded-xl p-4 border border-border-subtle">
+                    <div className="text-[10px] text-text-muted uppercase tracking-widest mb-1.5">Architecture</div>
+                    <div className="text-sm font-bold text-text-primary mt-1 flex items-center gap-2">
+                      {isQuantum ? <Cpu className="w-4 h-4 text-quantum-400" /> : <Layers className="w-4 h-4 text-text-muted" />}
                       {data.prediction.model_name || "Hybrid Quantum VQC"}
                     </div>
                   </div>
@@ -193,24 +193,24 @@ export default function ExplainabilityPage() {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
               
               {/* Level 1: Visual Grad-CAM Analysis */}
-              <div className="card p-6 bg-graphite-900/50 flex flex-col h-[700px]">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-graphite-800 pb-4 mb-6">
+              <div className="card p-6 bg-bg-panel/50 flex flex-col h-[700px]">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-subtle pb-4 mb-6">
                   <div>
-                    <h2 className="font-bold text-white text-base flex items-center gap-2 mb-1">
+                    <h2 className="font-bold text-text-primary text-base flex items-center gap-2 mb-1">
                       <Eye className="w-5 h-5 text-clinical-400" />
                       Visual Grad-CAM Attention Map
                     </h2>
-                    <p className="text-[11px] text-graphite-400 font-mono">
+                    <p className="text-[11px] text-text-muted font-mono">
                       Target: <span className="text-clinical-300">ResNet18.layer4[1].conv2</span> (Pre-Pool)
                     </p>
                   </div>
                   
                   {hasGradcam && (
-                    <div className="flex bg-graphite-950 rounded-lg p-1 border border-graphite-800 shrink-0">
+                    <div className="flex bg-bg-base rounded-lg p-1 border border-border-subtle shrink-0">
                       <button
                         onClick={() => setActiveView("side-by-side")}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-all ${
-                          activeView === "side-by-side" ? "bg-clinical-600 text-white" : "text-graphite-400 hover:text-white"
+                          activeView === "side-by-side" ? "bg-clinical-600 text-white" : "text-text-muted hover:text-white"
                         }`}
                       >
                         <LayoutGrid className="w-3.5 h-3.5" /> Side-by-Side
@@ -218,7 +218,7 @@ export default function ExplainabilityPage() {
                       <button
                         onClick={() => setActiveView("overlay-focus")}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-all ${
-                          activeView === "overlay-focus" ? "bg-clinical-600 text-white" : "text-graphite-400 hover:text-white"
+                          activeView === "overlay-focus" ? "bg-clinical-600 text-white" : "text-text-muted hover:text-white"
                         }`}
                       >
                         <Target className="w-3.5 h-3.5" /> Focus
@@ -231,8 +231,8 @@ export default function ExplainabilityPage() {
                   {hasGradcam ? (
                     activeView === "side-by-side" ? (
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
-                        <div className="bg-graphite-950/80 rounded-xl p-3 border border-graphite-800 flex flex-col">
-                          <p className="text-[10px] font-bold text-graphite-400 uppercase tracking-widest mb-3 text-center">1. Original</p>
+                        <div className="bg-bg-base/80 rounded-xl p-3 border border-border-subtle flex flex-col">
+                          <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-3 text-center">1. Original</p>
                           <div className="flex-1 bg-black rounded-lg overflow-hidden flex items-center justify-center relative">
                             <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none"></div>
                             <img
@@ -243,8 +243,8 @@ export default function ExplainabilityPage() {
                           </div>
                         </div>
 
-                        <div className="bg-graphite-950/80 rounded-xl p-3 border border-graphite-800 flex flex-col">
-                          <p className="text-[10px] font-bold text-graphite-400 uppercase tracking-widest mb-3 text-center">2. Heatmap</p>
+                        <div className="bg-bg-base/80 rounded-xl p-3 border border-border-subtle flex flex-col">
+                          <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-3 text-center">2. Heatmap</p>
                           <div className="flex-1 bg-black rounded-lg overflow-hidden flex items-center justify-center relative">
                             <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none"></div>
                             <img
@@ -267,12 +267,12 @@ export default function ExplainabilityPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex-1 bg-graphite-950/80 rounded-xl p-4 border border-clinical-900/30 flex flex-col items-center justify-center relative overflow-hidden">
+                      <div className="flex-1 bg-bg-base/80 rounded-xl p-4 border border-clinical-900/30 flex flex-col items-center justify-center relative overflow-hidden">
                         <div className="absolute inset-0 bg-clinical-900/5 pointer-events-none"></div>
-                        <p className="text-xs font-bold text-clinical-400 uppercase tracking-widest mb-4 z-10 bg-graphite-950/80 px-3 py-1 rounded-full border border-clinical-900/50">
+                        <p className="text-xs font-bold text-clinical-400 uppercase tracking-widest mb-4 z-10 bg-bg-base/80 px-3 py-1 rounded-full border border-clinical-900/50">
                           Superimposed Grad-CAM Attention
                         </p>
-                        <div className="w-full max-w-md aspect-square bg-black rounded-xl overflow-hidden shadow-2xl relative z-10 border border-graphite-800">
+                        <div className="w-full max-w-md aspect-square bg-black rounded-xl overflow-hidden shadow-2xl relative z-10 border border-border-subtle">
                           <img
                             src={`/api/explanations/${data.explanation.id}/image/overlay`}
                             alt="Grad-CAM Overlay Focus"
@@ -292,13 +292,13 @@ export default function ExplainabilityPage() {
               </div>
 
               {/* Level 2: 4D PCA / Quantum Feature Attributions */}
-              <div className="card p-6 bg-graphite-900/50 flex flex-col h-[700px]">
-                <div className="border-b border-graphite-800 pb-4 mb-6">
-                  <h2 className="font-bold text-white text-base flex items-center gap-2 mb-1">
+              <div className="card p-6 bg-bg-panel/50 flex flex-col h-[700px]">
+                <div className="border-b border-border-subtle pb-4 mb-6">
+                  <h2 className="font-bold text-text-primary text-base flex items-center gap-2 mb-1">
                     <AlignLeft className="w-5 h-5 text-purple-400" />
                     4D Latent Feature Attributions
                   </h2>
-                  <p className="text-[11px] text-graphite-400 font-mono">
+                  <p className="text-[11px] text-text-muted font-mono">
                     Taylor Gradient Sensitivity: Directional influence on boundary
                   </p>
                 </div>
@@ -307,7 +307,7 @@ export default function ExplainabilityPage() {
                   <div className="flex-1 flex flex-col">
                     
                     {/* Legend */}
-                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-graphite-500 mb-4 px-2">
+                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-text-muted mb-4 px-2">
                       <span>Principal Component</span>
                       <span className="flex items-center gap-4">
                         <span className="flex items-center gap-1.5">
@@ -327,7 +327,7 @@ export default function ExplainabilityPage() {
                         const barWidth = Math.min(100, Math.max(2, absScore * 250)); // Scaler for visualization
 
                         return (
-                          <div key={i} className="p-4 bg-graphite-950/80 rounded-xl border border-graphite-800 relative overflow-hidden group hover:border-graphite-700 transition-colors">
+                          <div key={i} className="p-4 bg-bg-base/80 rounded-xl border border-border-subtle relative overflow-hidden group hover:border-border-strong transition-colors">
                             {/* Ambient glow based on direction */}
                             <div className={`absolute -right-10 -top-10 w-24 h-24 blur-2xl opacity-10 rounded-full transition-opacity group-hover:opacity-20 ${
                               isPositive ? 'bg-amber-500' : 'bg-emerald-500'
@@ -335,11 +335,11 @@ export default function ExplainabilityPage() {
 
                             <div className="flex items-center justify-between mb-3 relative z-10">
                               <div className="flex items-center gap-3">
-                                <span className="font-mono text-xs font-bold text-white bg-graphite-800 px-2.5 py-1 rounded-md border border-graphite-700">
+                                <span className="font-mono text-xs font-bold text-text-primary bg-bg-card px-2.5 py-1 rounded-md border border-border-strong">
                                   {f.feature_name || f.feature_label || `PC${i + 1}`}
                                 </span>
                                 {f.input_value !== undefined && (
-                                  <span className="text-graphite-500 font-mono text-[10px]">
+                                  <span className="text-text-muted font-mono text-[10px]">
                                     val: {f.input_value.toFixed(3)}
                                   </span>
                                 )}
@@ -349,9 +349,9 @@ export default function ExplainabilityPage() {
                               </div>
                             </div>
 
-                            <div className="w-full h-2 bg-graphite-900 rounded-full overflow-hidden flex relative z-10">
+                            <div className="w-full h-2 bg-bg-panel rounded-full overflow-hidden flex relative z-10">
                               {/* Center line */}
-                              <div className="absolute left-1/2 top-0 bottom-0 w-px bg-graphite-700 z-20"></div>
+                              <div className="absolute left-1/2 top-0 bottom-0 w-px bg-bg-active z-20"></div>
                               
                               {/* Left half (Negative / Normal) */}
                               <div className="w-1/2 h-full flex justify-end pr-1">
@@ -379,9 +379,9 @@ export default function ExplainabilityPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-graphite-950/50 rounded-xl border border-graphite-800 text-graphite-500">
+                  <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-bg-base/50 rounded-xl border border-border-subtle text-text-muted">
                     <AlignLeft className="w-12 h-12 mb-4 opacity-50" />
-                    <p className="text-sm font-medium text-graphite-300">No Feature Attributions</p>
+                    <p className="text-sm font-medium text-text-secondary">No Feature Attributions</p>
                     <p className="text-xs mt-2 max-w-xs">Latent space attributions are currently unavailable for this study.</p>
                   </div>
                 )}

@@ -119,15 +119,16 @@ app.get('/api/health/db', async (_req, res) => {
 // Routes
 app.use('/', router);
 
-runMigrations().then(() => {
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`HQML Backend running on 0.0.0.0:${PORT}`);
-    console.log(`Allowed Origins: ${Array.from(allowedOriginsSet).join(', ')}`);
-    console.log(`ML Service: ${process.env.ML_SERVICE_URL || 'http://localhost:8000'}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`HQML Backend running on 0.0.0.0:${PORT}`);
+  console.log(`Allowed Origins: ${Array.from(allowedOriginsSet).join(', ')}`);
+  console.log(`ML Service: ${process.env.ML_SERVICE_URL || 'http://localhost:8000'}`);
+
+  runMigrations().then(() => {
+    console.log('Database migrations applied successfully.');
+  }).catch((err) => {
+    console.warn('Notice: PostgreSQL migrations skipped or offline (operating in fallback/resilient mode):', err?.message || err);
   });
-}).catch(err => {
-  console.error('Failed to run migrations on startup:', err);
-  process.exit(1);
 });
 
 export default app;

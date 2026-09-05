@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import AppLayout from "../components/layout/AppLayout";
 import api from "../lib/api";
@@ -68,7 +68,7 @@ export default function StudyDetailPage() {
       <AppLayout>
         <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
           <Loader2 className="w-8 h-8 text-clinical-500 animate-spin" />
-          <p className="text-sm font-mono text-graphite-400 uppercase tracking-widest">Loading Study Context...</p>
+          <p className="text-sm font-mono text-text-muted uppercase tracking-widest">Loading Study Context...</p>
         </div>
       </AppLayout>
     );
@@ -77,9 +77,9 @@ export default function StudyDetailPage() {
   if (!study) {
     return (
       <AppLayout>
-        <div className="p-12 text-center text-graphite-400 card max-w-xl mx-auto mt-8 bg-graphite-900 border-graphite-800">
+        <div className="p-12 text-center text-text-muted card max-w-xl mx-auto mt-8 bg-bg-panel border-border-subtle">
           <ShieldAlert className="w-12 h-12 text-red-500/50 mx-auto mb-4" />
-          <h2 className="text-lg font-bold text-white mb-2">Study Not Found</h2>
+          <h2 className="text-lg font-bold text-text-primary mb-2">Study Not Found</h2>
           <p className="text-sm">The requested study ID could not be loaded or you lack permission.</p>
           <Link to="/studies" className="btn-secondary mt-6">Return to Studies</Link>
         </div>
@@ -94,7 +94,7 @@ export default function StudyDetailPage() {
       ? "bg-blue-950/50 text-blue-400 border-blue-900"
       : s === "error" || s === "failed"
       ? "bg-red-950/50 text-red-400 border-red-900"
-      : "bg-graphite-900 text-graphite-400 border-graphite-800";
+      : "bg-bg-panel text-text-muted border-border-subtle";
 
   let fileList: string[] = [];
   try {
@@ -104,14 +104,15 @@ export default function StudyDetailPage() {
   }
   const baseSliceCount = Math.max(1, Number(study.slice_count ?? study.metadata?.slice_count ?? (fileList.length > 0 ? fileList.length : 1)));
   const imageSize = study.metadata?.image_size || [128, 128]; // [H, W]
-  let totalSlices = baseSliceCount;
-  if (activePlane === 'coronal') {
-    totalSlices = imageSize[0];
-  } else if (activePlane === 'sagittal') {
-    totalSlices = imageSize[1];
-  }
-
   const has3dVolume = Boolean(study.has_3d_volume ?? (study.metadata?.has_3d_volume || baseSliceCount > 3));
+  let totalSlices = baseSliceCount;
+  if (has3dVolume) {
+    if (activePlane === 'coronal') {
+      totalSlices = imageSize[0];
+    } else if (activePlane === 'sagittal') {
+      totalSlices = imageSize[1];
+    }
+  }
   const explanationId = explanationData?.explanation?.id;
   const originalSliceUrl = `/api/studies/${study.id}/slice/${currentSlice}?plane=${activePlane}`;
 
@@ -126,7 +127,7 @@ export default function StudyDetailPage() {
               <ArrowLeft className="w-3.5 h-3.5" /> Back to Library
             </Link>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-white tracking-tight">
+              <h1 className="text-2xl font-bold text-text-primary tracking-tight">
                 {study.original_filename || `Study #${study.id}`}
               </h1>
               <ModeBadge mode={study.mode || "DEMO"} />
@@ -134,9 +135,9 @@ export default function StudyDetailPage() {
                 {study.status || 'UNKNOWN'}
               </span>
             </div>
-            <div className="text-xs text-graphite-400 font-mono flex items-center gap-3">
+            <div className="text-xs text-text-muted font-mono flex items-center gap-3">
               <span>UID: {study.study_instance_uid || `QKN-STUDY-${study.id}`}</span>
-              <span className="w-1 h-1 rounded-full bg-graphite-600"></span>
+              <span className="w-1 h-1 rounded-full bg-border-hover"></span>
               <span>Ingested: {formatDate(study.created_at)}</span>
             </div>
           </div>
@@ -172,7 +173,7 @@ export default function StudyDetailPage() {
             {/* Prediction Results History */}
             {predictions.length > 0 && (
               <div className="space-y-4">
-                <h3 className="text-sm font-bold text-white uppercase tracking-widest border-b border-graphite-800 pb-2">Analysis History</h3>
+                <h3 className="text-sm font-bold text-text-primary uppercase tracking-widest border-b border-border-subtle pb-2">Analysis History</h3>
                 <div className="space-y-4">
                   {predictions.map((pred) => (
                     <PredictionPanel key={pred.id} prediction={pred} />
@@ -186,14 +187,14 @@ export default function StudyDetailPage() {
           <div className="xl:col-span-4 space-y-6">
             
             {/* Run Analysis Card */}
-            <div className="card p-6 border-clinical-900/50 bg-gradient-to-b from-clinical-950/30 to-graphite-900/50 relative overflow-hidden">
+            <div className="card p-6 border-clinical-900/50 bg-gradient-to-b from-clinical-950/20/30 to-bg-panel/50 relative overflow-hidden">
               <div className="absolute -right-10 -top-10 text-clinical-900/20">
                 <Cpu className="w-32 h-32" />
               </div>
-              <h3 className="text-sm font-bold text-white mb-2 relative z-10 flex items-center gap-2">
+              <h3 className="text-sm font-bold text-text-primary mb-2 relative z-10 flex items-center gap-2">
                 <Network className="w-4 h-4 text-clinical-400" /> AI Inference Engine
               </h3>
-              <p className="text-xs text-graphite-400 mb-6 max-w-[90%] relative z-10">
+              <p className="text-xs text-text-muted mb-6 max-w-[90%] relative z-10">
                 Execute automated feature extraction and classification. The quantum pipeline utilizes a 4-qubit VQC for advanced topology analysis.
               </p>
 
@@ -232,32 +233,32 @@ export default function StudyDetailPage() {
             </div>
 
             {/* Study Properties */}
-            <div className="card p-6 bg-graphite-900/30">
-              <h3 className="text-xs font-bold text-graphite-400 uppercase tracking-widest border-b border-graphite-800 pb-3 mb-4">
+            <div className="card p-6 bg-bg-panel/30">
+              <h3 className="text-xs font-bold text-text-muted uppercase tracking-widest border-b border-border-subtle pb-3 mb-4">
                 Volume Metadata
               </h3>
               <div className="grid grid-cols-2 gap-y-5 gap-x-4 text-sm">
                 <div>
-                  <div className="text-[10px] text-graphite-500 uppercase tracking-wider mb-1">Preprocessing</div>
+                  <div className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Preprocessing</div>
                   <div className="font-semibold text-clinical-400 flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5" /> 128×128 Normalized
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-graphite-500 uppercase tracking-wider mb-1">Series Files</div>
-                  <div className="font-semibold text-white font-mono">{fileList.length || 1} file(s)</div>
+                  <div className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Series Files</div>
+                  <div className="font-semibold text-text-primary font-mono">{fileList.length || 1} file(s)</div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-graphite-500 uppercase tracking-wider mb-1">Total Slices</div>
-                  <div className="font-semibold text-white font-mono">{totalSlices}</div>
+                  <div className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Total Slices</div>
+                  <div className="font-semibold text-text-primary font-mono">{totalSlices}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-graphite-500 uppercase tracking-wider mb-1">Geometry</div>
-                  <div className="font-semibold text-white">{has3dVolume ? "3D Volumetric" : "Single 2D"}</div>
+                  <div className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Geometry</div>
+                  <div className="font-semibold text-text-primary">{has3dVolume ? "3D Volumetric" : "Single 2D"}</div>
                 </div>
                 <div className="col-span-2">
-                  <div className="text-[10px] text-graphite-500 uppercase tracking-wider mb-1">Dataset Ground Truth</div>
-                  <div className="inline-block px-2.5 py-1 rounded bg-graphite-800 border border-graphite-700 text-xs font-semibold text-graphite-300">
+                  <div className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Dataset Ground Truth</div>
+                  <div className="inline-block px-2.5 py-1 rounded bg-bg-card border border-border-strong text-xs font-semibold text-text-secondary">
                     {study.label !== null && study.label !== undefined
                       ? study.label ? "Abnormal (Positive)" : "Normal (Negative)"
                       : "Unlabeled (Inference Only)"}
@@ -267,26 +268,26 @@ export default function StudyDetailPage() {
             </div>
 
             {/* Architecture Architecture Info */}
-            <div className="card p-6 bg-graphite-900/30">
-              <h3 className="text-xs font-bold text-graphite-400 uppercase tracking-widest border-b border-graphite-800 pb-3 mb-4">
+            <div className="card p-6 bg-bg-panel/30">
+              <h3 className="text-xs font-bold text-text-muted uppercase tracking-widest border-b border-border-subtle pb-3 mb-4">
                 Pipeline Architecture
               </h3>
               <div className="space-y-4 text-xs">
-                <div className="flex justify-between items-center border-b border-graphite-800/50 pb-2">
-                  <span className="text-graphite-500">Backbone</span>
-                  <span className="font-mono text-white">ResNet18 (512D)</span>
+                <div className="flex justify-between items-center border-b border-border-subtle/50 pb-2">
+                  <span className="text-text-muted">Backbone</span>
+                  <span className="font-mono text-text-primary">ResNet18 (512D)</span>
                 </div>
-                <div className="flex justify-between items-center border-b border-graphite-800/50 pb-2">
-                  <span className="text-graphite-500">Bottleneck</span>
-                  <span className="font-mono text-white">PCA (4 Components)</span>
+                <div className="flex justify-between items-center border-b border-border-subtle/50 pb-2">
+                  <span className="text-text-muted">Bottleneck</span>
+                  <span className="font-mono text-text-primary">PCA (4 Components)</span>
                 </div>
-                <div className="flex justify-between items-center border-b border-graphite-800/50 pb-2">
-                  <span className="text-graphite-500">Quantum Node</span>
+                <div className="flex justify-between items-center border-b border-border-subtle/50 pb-2">
+                  <span className="text-text-muted">Quantum Node</span>
                   <span className="font-mono text-quantum-400">4-Qubit VQC (RY+CNOT)</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-graphite-500">Simulation Target</span>
-                  <span className="font-mono text-graphite-400">PennyLane (default.qubit)</span>
+                  <span className="text-text-muted">Simulation Target</span>
+                  <span className="font-mono text-text-muted">PennyLane (default.qubit)</span>
                 </div>
               </div>
             </div>

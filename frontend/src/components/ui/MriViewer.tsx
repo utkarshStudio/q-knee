@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { resolveImageUrl } from "../../lib/utils";
 import { Maximize, RotateCcw, ZoomIn, ZoomOut, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, XCircle } from "lucide-react";
 
@@ -96,28 +96,28 @@ export function MriViewer({
   const activeImageUrl = resolveImageUrl(rawActiveUrl);
 
   return (
-    <div className={`bg-graphite-950 text-graphite-100 rounded-2xl overflow-hidden shadow-2xl border border-graphite-800 flex flex-col transition-all duration-300 ${isFullscreen ? 'fixed inset-4 z-50' : 'relative'}`}>
+    <div className={`bg-bg-base text-text-primary rounded-2xl overflow-hidden shadow-2xl border border-border-subtle flex flex-col transition-all duration-300 ${isFullscreen ? 'fixed inset-4 z-50' : 'relative'}`}>
       
       {/* Viewer Header / Toolbar */}
-      <div className="bg-graphite-900 px-4 py-3 border-b border-graphite-800 flex flex-wrap items-center justify-between gap-4 select-none">
+      <div className="bg-bg-panel px-4 py-3 border-b border-border-subtle flex flex-wrap items-center justify-between gap-4 select-none">
         
         {/* Left: Status & Identity */}
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-graphite-950 border border-graphite-800">
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-bg-base border border-border-subtle">
             <span className="w-2 h-2 rounded-full bg-clinical-500 shadow-[0_0_8px_rgba(20,184,166,0.8)]"></span>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-graphite-300 font-mono">Workspace</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-text-secondary font-mono">Workspace</span>
           </div>
           
-          <div className="hidden sm:flex items-center gap-1 text-[11px] font-mono text-graphite-400">
+          <div className="hidden sm:flex items-center gap-1 text-[11px] font-mono text-text-muted">
             <span>Slice</span>
-            <span className="text-white bg-graphite-800 px-1.5 py-0.5 rounded ml-1">{sliceIndex + 1}</span>
+            <span className="text-white bg-bg-card px-1.5 py-0.5 rounded ml-1">{sliceIndex + 1}</span>
             <span className="mx-1">/</span>
             <span>{effectiveTotal}</span>
           </div>
         </div>
 
         {/* Center: Anatomical Planes */}
-        <div className="flex items-center bg-graphite-950 rounded-lg p-1 border border-graphite-800">
+        <div className="flex items-center bg-bg-base rounded-lg p-1 border border-border-subtle">
           {(["axial", "coronal", "sagittal"] as const).map((plane) => (
             <button
               key={plane}
@@ -128,8 +128,8 @@ export function MriViewer({
                 activePlane === plane
                   ? "bg-clinical-600 text-white shadow-md shadow-clinical-900/50"
                   : !has3dVolume && plane !== "sagittal"
-                  ? "text-graphite-600 opacity-50 cursor-not-allowed"
-                  : "text-graphite-400 hover:text-white hover:bg-graphite-800"
+                  ? "text-text-disabled opacity-50 cursor-not-allowed"
+                  : "text-text-muted hover:text-white hover:bg-bg-card"
               }`}
             >
               {plane}
@@ -139,12 +139,12 @@ export function MriViewer({
 
         {/* Right: View Modes & Controls */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center bg-graphite-950 rounded-lg p-1 border border-graphite-800">
+          <div className="flex items-center bg-bg-base rounded-lg p-1 border border-border-subtle">
             <button
               type="button"
               onClick={() => setViewMode("original")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-all ${
-                viewMode === "original" ? "bg-graphite-700 text-white" : "text-graphite-400 hover:text-white"
+                viewMode === "original" ? "bg-bg-active text-white" : "text-text-muted hover:text-white"
               }`}
             >
               <ImageIcon className="w-3.5 h-3.5" /> Original
@@ -153,7 +153,7 @@ export function MriViewer({
               type="button"
               onClick={() => setViewMode("heatmap")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-all ${
-                viewMode === "heatmap" ? "bg-amber-700 text-white" : "text-graphite-400 hover:text-white"
+                viewMode === "heatmap" ? "bg-amber-700 text-white" : "text-text-muted hover:text-white"
               }`}
             >
               <Eye className="w-3.5 h-3.5" /> Heatmap
@@ -162,18 +162,18 @@ export function MriViewer({
               type="button"
               onClick={() => setViewMode("overlay")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-all ${
-                viewMode === "overlay" ? "bg-deepblue-600 text-white" : "text-graphite-400 hover:text-white"
+                viewMode === "overlay" ? "bg-deepblue-600 text-white" : "text-text-muted hover:text-white"
               }`}
             >
               <Settings2 className="w-3.5 h-3.5" /> Overlay
             </button>
           </div>
           
-          <div className="w-px h-6 bg-graphite-800"></div>
+          <div className="w-px h-6 bg-bg-card"></div>
           
           <button 
             onClick={() => setIsFullscreen(!isFullscreen)}
-            className="p-1.5 text-graphite-400 hover:text-white hover:bg-graphite-800 rounded-md transition-colors"
+            className="p-1.5 text-text-muted hover:text-white hover:bg-bg-card rounded-md transition-colors"
             title="Toggle Fullscreen"
           >
             <Maximize className="w-4 h-4" />
@@ -189,7 +189,7 @@ export function MriViewer({
         {isLoading ? (
           <div className="flex flex-col items-center gap-4 relative z-10">
             <div className="relative w-16 h-16">
-              <div className="absolute inset-0 rounded-full border-2 border-graphite-800"></div>
+              <div className="absolute inset-0 rounded-full border-2 border-border-subtle"></div>
               <div className="absolute inset-0 rounded-full border-t-2 border-clinical-500 animate-spin"></div>
             </div>
             <span className="text-xs font-mono text-clinical-400 tracking-widest uppercase">Loading Volume Data</span>
@@ -209,9 +209,9 @@ export function MriViewer({
 
             {/* Warning overlay if CAM requested but unavailable */}
             {(viewMode === "heatmap" || viewMode === "overlay") && !hasCam && (
-              <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-graphite-950/80 border border-amber-500/30 px-4 py-2 rounded-lg backdrop-blur-md text-center max-w-[90%] shadow-2xl flex items-center gap-3">
+              <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-bg-base/80 border border-amber-500/30 px-4 py-2 rounded-lg backdrop-blur-md text-center max-w-[90%] shadow-2xl flex items-center gap-3">
                 <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                <span className="text-xs text-graphite-200">
+                <span className="text-xs text-text-secondary">
                   <span className="text-amber-400 font-semibold mr-1">Explainability Unavailable.</span>
                   Showing original slice. Run inference to generate maps.
                 </span>
@@ -226,14 +226,14 @@ export function MriViewer({
                   <XCircle className="w-6 h-6" />
                 </div>
                 <p className="text-sm font-semibold text-white">Preview Unavailable</p>
-                <p className="text-xs text-graphite-400 max-w-xs">Data stream interrupted. Please re-upload or check connection.</p>
+                <p className="text-xs text-text-muted max-w-xs">Data stream interrupted. Please re-upload or check connection.</p>
               </>
             ) : (
               <>
-                <div className="w-16 h-16 rounded-full border border-graphite-800 flex items-center justify-center mb-2 bg-graphite-950">
-                  <ImageIcon className="w-6 h-6 text-graphite-600" />
+                <div className="w-16 h-16 rounded-full border border-border-subtle flex items-center justify-center mb-2 bg-bg-base">
+                  <ImageIcon className="w-6 h-6 text-text-disabled" />
                 </div>
-                <p className="text-sm font-medium text-graphite-300">No Volumetric Data</p>
+                <p className="text-sm font-medium text-text-secondary">No Volumetric Data</p>
               </>
             )}
           </div>
@@ -241,30 +241,30 @@ export function MriViewer({
 
         {/* HUD Elements */}
         <div className="absolute top-4 left-4 flex flex-col gap-1 pointer-events-none">
-          <div className="bg-black/60 backdrop-blur-md px-2 py-1 rounded text-[10px] font-mono text-graphite-300 border border-white/5">
+          <div className="bg-black/60 backdrop-blur-md px-2 py-1 rounded text-[10px] font-mono text-text-secondary border border-white/5">
             PLN: <span className="text-white">{activePlane.toUpperCase()}</span>
           </div>
-          <div className="bg-black/60 backdrop-blur-md px-2 py-1 rounded text-[10px] font-mono text-graphite-300 border border-white/5">
+          <div className="bg-black/60 backdrop-blur-md px-2 py-1 rounded text-[10px] font-mono text-text-secondary border border-white/5">
             MOD: <span className="text-white">{viewMode.toUpperCase()}</span>
           </div>
         </div>
         
-        <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md px-2 py-1 rounded text-[10px] font-mono text-graphite-300 border border-white/5 pointer-events-none">
+        <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md px-2 py-1 rounded text-[10px] font-mono text-text-secondary border border-white/5 pointer-events-none">
           IDX: <span className="text-white">{sliceIndex + 1}</span> / {effectiveTotal}
         </div>
         
-        <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-2 py-1 rounded text-[10px] font-mono text-graphite-300 border border-white/5 pointer-events-none">
+        <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-2 py-1 rounded text-[10px] font-mono text-text-secondary border border-white/5 pointer-events-none">
           W/L: <span className="text-white">{brightness}% / {contrast}%</span>
         </div>
       </div>
 
       {/* Footer Controls */}
-      <div className="bg-graphite-900 px-6 py-4 border-t border-graphite-800">
+      <div className="bg-bg-panel px-6 py-4 border-t border-border-subtle">
         <div className="flex flex-col sm:flex-row items-center gap-6">
           
           {/* Slice Scrubber */}
           <div className="flex-1 w-full flex items-center gap-4">
-            <span className="text-[10px] font-mono text-graphite-400 w-8">Slice</span>
+            <span className="text-[10px] font-mono text-text-muted w-8">Slice</span>
             <input
               type="range"
               min={0}
@@ -273,7 +273,7 @@ export function MriViewer({
               disabled={effectiveTotal <= 1}
               onChange={(e) => handleSliceChange(parseInt(e.target.value, 10))}
               className={`flex-1 h-1.5 rounded-full appearance-none cursor-pointer outline-none transition-all ${
-                effectiveTotal <= 1 ? "bg-graphite-800 opacity-50" : "bg-graphite-700 hover:bg-graphite-600"
+                effectiveTotal <= 1 ? "bg-bg-card opacity-50" : "bg-bg-active hover:bg-border-hover"
               }`}
               style={{
                 background: effectiveTotal > 1 
@@ -286,32 +286,32 @@ export function MriViewer({
           {/* Windowing Tools */}
           <div className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-4">
             <div className="flex items-center gap-2 group relative">
-              <SlidersHorizontal className="w-4 h-4 text-graphite-400" />
+              <SlidersHorizontal className="w-4 h-4 text-text-muted" />
               <input
                 type="range"
                 min={50} max={150}
                 value={brightness}
                 onChange={(e) => setBrightness(parseInt(e.target.value, 10))}
-                className="w-20 h-1 bg-graphite-800 rounded appearance-none cursor-pointer"
+                className="w-20 h-1 bg-bg-card rounded appearance-none cursor-pointer"
                 title="Brightness"
               />
             </div>
             
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-gradient-to-br from-white to-black border border-graphite-700"></div>
+              <div className="w-3 h-3 rounded-full bg-gradient-to-br from-white to-black border border-border-strong"></div>
               <input
                 type="range"
                 min={50} max={150}
                 value={contrast}
                 onChange={(e) => setContrast(parseInt(e.target.value, 10))}
-                className="w-20 h-1 bg-graphite-800 rounded appearance-none cursor-pointer"
+                className="w-20 h-1 bg-bg-card rounded appearance-none cursor-pointer"
                 title="Contrast"
               />
             </div>
             
             <button
               onClick={() => { setBrightness(100); setContrast(100); }}
-              className="p-1.5 text-graphite-400 hover:text-white rounded-md hover:bg-graphite-800 transition-colors"
+              className="p-1.5 text-text-muted hover:text-white rounded-md hover:bg-bg-card transition-colors"
               title="Reset View"
             >
               <RotateCcw className="w-4 h-4" />

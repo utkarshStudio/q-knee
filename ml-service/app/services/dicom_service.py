@@ -207,7 +207,7 @@ def load_npy_volume_from_array(arr: np.ndarray, plane: str = "axial") -> List[Im
         arr = np.transpose(arr, (2, 0, 1))
 
     # Transpose according to requested plane assuming (D, H, W)
-    if arr.ndim >= 3:
+    if arr.ndim >= 3 and arr.shape[0] > 1:
         p = plane.lower()
         if p == "coronal":
             # (H, D, W) -> Extract along H

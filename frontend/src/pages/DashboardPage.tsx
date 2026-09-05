@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import AppLayout from "../components/layout/AppLayout";
 import api from "../lib/api";
@@ -55,8 +55,8 @@ export default function DashboardPage() {
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">Research Dashboard</h1>
-            <p className="text-graphite-400 mt-2 text-sm max-w-xl">
+            <h1 className="text-3xl font-bold text-text-primary tracking-tight">Research Dashboard</h1>
+            <p className="text-text-muted mt-2 text-sm max-w-xl">
               Monitor hybrid quantum-classical model inference, recent MRI studies, and platform health.
             </p>
           </div>
@@ -76,12 +76,12 @@ export default function DashboardPage() {
               status={status.database} 
               label={"Database: " + (status.database === "online" ? "Connected" : status.database === "loading" ? "Connecting..." : "Offline")} 
             />
-            <div className="w-px h-6 bg-graphite-800 hidden sm:block"></div>
+            <div className="w-px h-6 bg-bg-card hidden sm:block"></div>
             <StatusIndicator 
               status={status.mlService} 
               label={"ML Engine: " + (status.mlService === "online" ? "Operational" : status.mlService === "loading" ? "Connecting..." : "Degraded")} 
             />
-            <div className="w-px h-6 bg-graphite-800 hidden sm:block"></div>
+            <div className="w-px h-6 bg-bg-card hidden sm:block"></div>
             <StatusIndicator 
               status={status.datasetConfigured ? "online" : "offline"} 
               label={"Dataset: " + (status.datasetConfigured ? "RSNA Configured" : "Unconfigured")} 
@@ -90,14 +90,14 @@ export default function DashboardPage() {
           
           {status.mlHealth && (
             <div className="flex items-center gap-3 text-xs font-mono">
-              <span className="text-graphite-400 px-2.5 py-1 rounded-md bg-graphite-900 border border-graphite-800">
+              <span className="text-text-muted px-2.5 py-1 rounded-md bg-bg-panel border border-border-subtle">
                 Backend: <span className="text-quantum-400">{status.mlHealth.quantum_backend || 'Qiskit Aer'}</span>
               </span>
-              <span className="text-graphite-400 px-2.5 py-1 rounded-md bg-graphite-900 border border-graphite-800">
-                Qubits: <span className="text-white">{status.mlHealth.qubits || 4}</span>
+              <span className="text-text-muted px-2.5 py-1 rounded-md bg-bg-panel border border-border-subtle">
+                Qubits: <span className="text-text-primary">{status.mlHealth.qubits || 4}</span>
               </span>
-              <span className="text-graphite-400 px-2.5 py-1 rounded-md bg-graphite-900 border border-graphite-800">
-                PCA: <span className="text-white">{status.mlHealth.pca_components || 4}</span>
+              <span className="text-text-muted px-2.5 py-1 rounded-md bg-bg-panel border border-border-subtle">
+                PCA: <span className="text-text-primary">{status.mlHealth.pca_components || 4}</span>
               </span>
             </div>
           )}
@@ -107,7 +107,7 @@ export default function DashboardPage() {
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="card p-6 h-32 animate-pulse bg-graphite-800/50 border-graphite-700/50" />
+              <div key={i} className="card p-6 h-32 animate-pulse bg-bg-card/50 border-border-strong/50" />
             ))}
           </div>
         ) : (
@@ -121,8 +121,8 @@ export default function DashboardPage() {
                   
                   <div className="flex items-start justify-between relative z-10">
                     <div>
-                      <div className="text-sm font-medium text-graphite-400 mb-1">{c.label}</div>
-                      <div className="text-3xl font-bold text-white tracking-tight">{c.value !== undefined ? c.value : "—"}</div>
+                      <div className="text-sm font-medium text-text-muted mb-1">{c.label}</div>
+                      <div className="text-3xl font-bold text-text-primary tracking-tight">{c.value !== undefined ? c.value : "—"}</div>
                     </div>
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${c.bg} ${c.border}`}>
                       <Icon className={`w-5 h-5 ${c.color}`} />
@@ -139,10 +139,10 @@ export default function DashboardPage() {
           
           {/* Recent Studies */}
           <div className="card flex flex-col h-[500px]">
-            <div className="flex items-center justify-between p-5 border-b border-graphite-800 bg-graphite-900/50 rounded-t-xl">
+            <div className="flex items-center justify-between p-5 border-b border-border-subtle bg-bg-panel/50 rounded-t-xl">
               <div className="flex items-center gap-2">
-                <Database className="w-4 h-4 text-graphite-400" />
-                <h2 className="font-semibold text-white">Recent Studies</h2>
+                <Database className="w-4 h-4 text-text-muted" />
+                <h2 className="font-semibold text-text-primary">Recent Studies</h2>
               </div>
               <Link to="/studies" className="text-xs text-clinical-400 hover:text-clinical-300 font-medium flex items-center gap-1 group">
                 View all <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
@@ -151,26 +151,26 @@ export default function DashboardPage() {
             
             <div className="flex-1 overflow-y-auto">
               {loading ? (
-                <div className="p-8 text-center text-graphite-500 text-sm">Loading studies...</div>
+                <div className="p-8 text-center text-text-muted text-sm">Loading studies...</div>
               ) : !stats?.recentStudies?.length ? (
                 <div className="p-12 text-center flex flex-col items-center justify-center h-full">
-                  <FolderOpen className="w-12 h-12 text-graphite-700 mb-4" />
-                  <p className="text-graphite-400 text-sm mb-4">No MRI studies have been uploaded yet.</p>
+                  <FolderOpen className="w-12 h-12 text-text-disabled mb-4" />
+                  <p className="text-text-muted text-sm mb-4">No MRI studies have been uploaded yet.</p>
                   <Link to="/studies/upload" className="btn-outline text-xs">Upload First Study</Link>
                 </div>
               ) : (
                 <div className="divide-y divide-graphite-800/50">
                   {stats.recentStudies.map(s => (
-                    <Link key={s.id} to={"/studies/" + s.id} className="flex items-center justify-between p-4 hover:bg-graphite-800/50 transition-colors group">
+                    <Link key={s.id} to={"/studies/" + s.id} className="flex items-center justify-between p-4 hover:bg-bg-card/50 transition-colors group">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-lg bg-graphite-800 border border-graphite-700 flex items-center justify-center shrink-0">
-                          <Scan className="w-5 h-5 text-graphite-400 group-hover:text-clinical-400 transition-colors" />
+                        <div className="w-10 h-10 rounded-lg bg-bg-card border border-border-strong flex items-center justify-center shrink-0">
+                          <Scan className="w-5 h-5 text-text-muted group-hover:text-clinical-400 transition-colors" />
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-graphite-200 truncate max-w-[200px] group-hover:text-white transition-colors">
+                          <div className="text-sm font-medium text-text-secondary truncate max-w-[200px] group-hover:text-text-primary transition-colors">
                             {s.original_filename || ("Study #" + s.id)}
                           </div>
-                          <div className="text-[11px] text-graphite-500 font-mono mt-0.5">
+                          <div className="text-[11px] text-text-muted font-mono mt-0.5">
                             {formatDate(s.created_at)}
                           </div>
                         </div>
@@ -193,10 +193,10 @@ export default function DashboardPage() {
 
           {/* Recent Predictions */}
           <div className="card flex flex-col h-[500px]">
-            <div className="flex items-center justify-between p-5 border-b border-graphite-800 bg-graphite-900/50 rounded-t-xl">
+            <div className="flex items-center justify-between p-5 border-b border-border-subtle bg-bg-panel/50 rounded-t-xl">
               <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-graphite-400" />
-                <h2 className="font-semibold text-white">Recent AI Analyses</h2>
+                <Activity className="w-4 h-4 text-text-muted" />
+                <h2 className="font-semibold text-text-primary">Recent AI Analyses</h2>
               </div>
               <Link to="/studies" className="text-xs text-clinical-400 hover:text-clinical-300 font-medium flex items-center gap-1 group">
                 View all <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
@@ -205,33 +205,33 @@ export default function DashboardPage() {
             
             <div className="flex-1 overflow-y-auto">
               {loading ? (
-                <div className="p-8 text-center text-graphite-500 text-sm">Loading predictions...</div>
+                <div className="p-8 text-center text-text-muted text-sm">Loading predictions...</div>
               ) : !stats?.recentPredictions?.length ? (
                 <div className="p-12 text-center flex flex-col items-center justify-center h-full">
-                  <Activity className="w-12 h-12 text-graphite-700 mb-4" />
-                  <p className="text-graphite-400 text-sm">No predictions have been run yet.</p>
+                  <Activity className="w-12 h-12 text-text-disabled mb-4" />
+                  <p className="text-text-muted text-sm">No predictions have been run yet.</p>
                 </div>
               ) : (
                 <div className="divide-y divide-graphite-800/50">
                   {stats.recentPredictions.map(p => (
-                    <Link key={p.id} to={"/studies/" + p.study_id} className="flex items-center justify-between p-4 hover:bg-graphite-800/50 transition-colors group">
+                    <Link key={p.id} to={"/studies/" + p.study_id} className="flex items-center justify-between p-4 hover:bg-bg-card/50 transition-colors group">
                       <div className="flex items-center gap-4">
                         <div className={`w-2 h-10 rounded-full shrink-0 ${p.predicted_class === "abnormal" ? "bg-amber-500" : "bg-emerald-500"}`}></div>
                         <div>
                           <div className={`text-sm font-semibold tracking-wide uppercase ${p.predicted_class === "abnormal" ? "text-amber-400" : "text-emerald-400"}`}>
                             {p.predicted_class === "abnormal" ? "ACL Abnormality" : "Normal"}
                           </div>
-                          <div className="text-[11px] text-graphite-500 mt-1 flex items-center gap-2">
+                          <div className="text-[11px] text-text-muted mt-1 flex items-center gap-2">
                             <span className="font-mono text-quantum-400 bg-quantum-950/30 px-1.5 rounded">{p.model_name}</span>
                             <span>{formatDate(p.created_at)}</span>
                           </div>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-mono text-white tracking-wider bg-graphite-900 px-2 py-0.5 rounded border border-graphite-700 inline-block">
+                        <div className="text-sm font-mono text-text-primary tracking-wider bg-bg-panel px-2 py-0.5 rounded border border-border-strong inline-block">
                           {formatMetric(p.abnormal_probability, 3)}
                         </div>
-                        <div className="text-[10px] text-graphite-500 uppercase tracking-widest mt-1">p(abnormal)</div>
+                        <div className="text-[10px] text-text-muted uppercase tracking-widest mt-1">p(abnormal)</div>
                       </div>
                     </Link>
                   ))}

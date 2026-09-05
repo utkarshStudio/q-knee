@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { formatPercent, formatDate } from "../../lib/utils";
 import { Brain, Cpu, ArrowRight, Activity, ShieldAlert, CheckCircle2 } from "lucide-react";
 
@@ -22,12 +22,12 @@ export function PredictionPanel({ prediction }: PredictionProps) {
         {/* Left Side: Verdict */}
         <div className="flex-1 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-graphite-900 border border-graphite-700 shadow-md">
-              <Activity className="w-5 h-5 text-graphite-400" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-bg-panel border border-border-strong shadow-md">
+              <Activity className="w-5 h-5 text-text-muted" />
             </div>
             <div>
-              <h3 className="text-xs font-bold text-graphite-400 uppercase tracking-widest mb-0.5">AI Analysis Result</h3>
-              <div className="text-[10px] text-graphite-500 font-mono">{formatDate(prediction.created_at)}</div>
+              <h3 className="text-xs font-bold text-text-muted uppercase tracking-widest mb-0.5">AI Analysis Result</h3>
+              <div className="text-[10px] text-text-muted font-mono">{formatDate(prediction.created_at)}</div>
             </div>
           </div>
           
@@ -45,26 +45,26 @@ export function PredictionPanel({ prediction }: PredictionProps) {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 pt-2 text-xs">
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-graphite-900 border border-graphite-800 text-graphite-300">
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-bg-panel border border-border-subtle text-text-secondary">
               {isQuantum ? <Cpu className="w-3.5 h-3.5 text-quantum-400" /> : <Brain className="w-3.5 h-3.5 text-clinical-400" />}
               {prediction.model_name}
             </span>
-            <span className="px-2.5 py-1 rounded bg-graphite-900 border border-graphite-800 text-graphite-300 font-mono">
+            <span className="px-2.5 py-1 rounded bg-bg-panel border border-border-subtle text-text-secondary font-mono">
               Conf: {formatPercent(prediction.confidence)}
             </span>
           </div>
         </div>
 
         {/* Right Side: Metrics & Action */}
-        <div className="flex flex-col items-end justify-between gap-4 border-t sm:border-t-0 sm:border-l border-graphite-800 pt-4 sm:pt-0 sm:pl-6 min-w-[200px]">
+        <div className="flex flex-col items-end justify-between gap-4 border-t sm:border-t-0 sm:border-l border-border-subtle pt-4 sm:pt-0 sm:pl-6 min-w-[200px]">
           
           <div className="w-full space-y-3">
             <div className="flex justify-between items-end">
-              <span className="text-[10px] font-bold text-graphite-500 uppercase tracking-widest">p(Abnormal)</span>
-              <span className="text-lg font-mono font-bold text-white">{formatPercent(prediction.abnormal_probability)}</span>
+              <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">p(Abnormal)</span>
+              <span className="text-lg font-mono font-bold text-text-primary">{formatPercent(prediction.abnormal_probability)}</span>
             </div>
             {/* Probability Bar */}
-            <div className="w-full h-1.5 bg-graphite-800 rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-bg-card rounded-full overflow-hidden">
               <div 
                 className={`h-full rounded-full transition-all duration-1000 ${isAbnormal ? "bg-amber-500" : "bg-emerald-500"}`}
                 style={{ width: `${(prediction.abnormal_probability || 0) * 100}%` }}

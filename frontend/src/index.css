@@ -44,36 +44,84 @@
   --color-quantum-500: #8b5cf6;
   --color-quantum-900: #4c1d95;
 
-  /* Semantic */
-  --color-bg-base: var(--color-graphite-950);
-  --color-bg-panel: var(--color-graphite-900);
-  --color-bg-card: var(--color-graphite-800);
+  /* Semantic Backgrounds */
+  --color-bg-base: var(--theme-bg-base);
+  --color-bg-panel: var(--theme-bg-panel);
+  --color-bg-card: var(--theme-bg-card);
+  --color-bg-hover: var(--theme-bg-hover);
+  --color-bg-active: var(--theme-bg-active);
   
-  --color-border-subtle: var(--color-graphite-800);
-  --color-border-strong: var(--color-graphite-700);
+  /* Semantic Borders */
+  --color-border-subtle: var(--theme-border-subtle);
+  --color-border-strong: var(--theme-border-strong);
+  --color-border-hover: var(--theme-border-hover);
 
-  --color-text-primary: var(--color-graphite-50);
-  --color-text-secondary: var(--color-graphite-300);
-  --color-text-muted: var(--color-graphite-400);
+  /* Semantic Text */
+  --color-text-primary: var(--theme-text-primary);
+  --color-text-secondary: var(--theme-text-secondary);
+  --color-text-muted: var(--theme-text-muted);
+  --color-text-disabled: var(--theme-text-disabled);
 
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
+:root {
+  --theme-bg-base: #f8fafc;
+  --theme-bg-panel: #ffffff;
+  --theme-bg-card: #ffffff;
+  --theme-bg-hover: #f1f5f9;
+  --theme-bg-active: #e2e8f0;
+  
+  --theme-border-subtle: #e2e8f0;
+  --theme-border-strong: #cbd5e1;
+  --theme-border-hover: #94a3b8;
+  
+  --theme-text-primary: #0f172a;
+  --theme-text-secondary: #334155;
+  --theme-text-muted: #64748b;
+  --theme-text-disabled: #94a3b8;
+
+  --theme-scrollbar-bg: #f8fafc;
+  --theme-scrollbar-thumb: #cbd5e1;
+  --theme-scrollbar-thumb-hover: #94a3b8;
+}
+
+.dark {
+  --theme-bg-base: var(--color-graphite-950);
+  --theme-bg-panel: var(--color-graphite-900);
+  --theme-bg-card: var(--color-graphite-800);
+  --theme-bg-hover: var(--color-graphite-800);
+  --theme-bg-active: var(--color-graphite-700);
+  
+  --theme-border-subtle: var(--color-graphite-800);
+  --theme-border-strong: var(--color-graphite-700);
+  --theme-border-hover: var(--color-graphite-500);
+  
+  --theme-text-primary: var(--color-graphite-50);
+  --theme-text-secondary: var(--color-graphite-200);
+  --theme-text-muted: var(--color-graphite-400);
+  --theme-text-disabled: var(--color-graphite-600);
+
+  --theme-scrollbar-bg: var(--color-graphite-950);
+  --theme-scrollbar-thumb: var(--color-graphite-700);
+  --theme-scrollbar-thumb-hover: var(--color-graphite-500);
+}
+
 @layer base {
   body {
-    @apply bg-[var(--color-bg-base)] text-[var(--color-text-primary)] font-sans antialiased;
+    @apply bg-bg-base text-text-primary font-sans antialiased;
   }
 }
 
 @layer components {
   /* Premium Card Design */
   .card {
-    @apply bg-[var(--color-bg-panel)] border border-[var(--color-border-strong)] rounded-xl shadow-lg backdrop-blur-sm;
+    @apply bg-bg-panel border border-border-strong rounded-xl shadow-lg backdrop-blur-sm;
   }
 
   .card-hover {
-    @apply hover:border-graphite-600 hover:shadow-xl transition-all duration-300;
+    @apply hover:border-border-hover hover:shadow-xl transition-all duration-300;
   }
 
   /* Buttons */
@@ -82,20 +130,20 @@
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center bg-graphite-800 text-graphite-100 font-medium text-sm px-4 py-2 rounded-lg transition-all duration-200 border border-graphite-700 hover:bg-graphite-700 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center bg-bg-card text-text-primary font-medium text-sm px-4 py-2 rounded-lg transition-all duration-200 border border-border-strong hover:bg-bg-hover disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-outline {
-    @apply inline-flex items-center justify-center bg-transparent text-graphite-200 font-medium text-sm px-4 py-2 rounded-lg transition-all duration-200 border border-graphite-600 hover:border-graphite-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center bg-transparent text-text-secondary font-medium text-sm px-4 py-2 rounded-lg transition-all duration-200 border border-border-hover hover:border-border-strong hover:text-text-primary disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center bg-transparent text-graphite-300 font-medium text-sm px-4 py-2 rounded-lg transition-all duration-200 hover:bg-graphite-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center bg-transparent text-text-muted font-medium text-sm px-4 py-2 rounded-lg transition-all duration-200 hover:bg-bg-hover hover:text-text-primary disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   /* Inputs */
   .input {
-    @apply w-full px-3 py-2 bg-graphite-900 border border-graphite-700 rounded-lg text-sm text-graphite-100 outline-none transition-all duration-200 placeholder-graphite-500 focus:border-clinical-500 focus:ring-1 focus:ring-clinical-500;
+    @apply w-full px-3 py-2 bg-bg-panel border border-border-strong rounded-lg text-sm text-text-primary outline-none transition-all duration-200 placeholder-text-disabled focus:border-clinical-500 focus:ring-1 focus:ring-clinical-500;
   }
 
   /* Status Badges */
@@ -115,20 +163,26 @@
     @apply bg-deepblue-950/50 text-deepblue-400 border-deepblue-800/50;
   }
   .badge-neutral {
-    @apply bg-graphite-800 text-graphite-300 border-graphite-700;
+    @apply bg-bg-hover text-text-secondary border-border-strong;
   }
 
   /* Grid Texture for Backgrounds */
   .bg-grid-pattern {
     background-image: 
+      linear-gradient(to right, rgba(150, 150, 150, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(150, 150, 150, 0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  
+  .dark .bg-grid-pattern {
+    background-image: 
       linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
       linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
   }
 
   /* Glassmorphism */
   .glass {
-    @apply bg-graphite-900/60 backdrop-blur-md border border-graphite-700/50;
+    @apply bg-bg-panel/60 backdrop-blur-md border border-border-strong/50;
   }
 
   /* Subtle Medical Grid Animation */
@@ -142,21 +196,21 @@
 
 @keyframes scan {
   0% { transform: translateY(-100%); }
-  100% { transform: translateY(1000px); } /* arbitrary large distance */
+  100% { transform: translateY(1000px); }
 }
 
-/* Custom Scrollbar for dark theme */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--color-graphite-950);
+  background: var(--theme-scrollbar-bg);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-graphite-700);
+  background: var(--theme-scrollbar-thumb);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-graphite-500);
+  background: var(--theme-scrollbar-thumb-hover);
 }
