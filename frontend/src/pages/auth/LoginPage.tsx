@@ -1,39 +1,125 @@
-﻿import { useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { Database, ArrowLeft, ArrowRight, Loader2, ShieldAlert } from "lucide-react";
 
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState(""); const [password, setPassword] = useState("");
-  const [error, setError] = useState(""); const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault(); setError(""); setLoading(true);
-    try { await login(email, password); navigate("/dashboard"); }
-    catch (err: any) { setError(err?.response?.data?.error || "Login failed"); }
-    finally { setLoading(false); }
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      await login(email, password);
+      navigate("/dashboard");
+    } catch (err: any) {
+      setError(err?.response?.data?.error || "Invalid email or password");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-graphite-950 px-4 py-12 relative overflow-hidden bg-grid-pattern">
+      <div className="absolute inset-0 bg-gradient-to-b from-graphite-950/40 via-graphite-950/80 to-graphite-950 pointer-events-none"></div>
+
+      <div className="w-full max-w-md relative z-10">
+        {/* Top return link */}
+        <div className="mb-6">
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-graphite-400 hover:text-clinical-400 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> Continue as Guest (Skip Sign In)
+          </Link>
+        </div>
+
+        {/* Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-purple-600 mb-4 shadow-lg text-white text-2xl font-bold">H</div>
-          <h1 className="text-2xl font-bold text-slate-900">HQML</h1>
-          <p className="text-slate-500 text-sm mt-1">Hybrid Quantum-Classical Knee AI</p>
+          <Link to="/" className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-clinical-600 to-deepblue-600 mb-4 shadow-lg shadow-clinical-900/30 border border-clinical-500/30">
+            <Database className="w-6 h-6 text-white" />
+          </Link>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Q-KNEE</h1>
+          <p className="text-graphite-400 text-xs font-mono uppercase tracking-wider mt-1">Optional Researcher Sign In</p>
         </div>
-        <div className="card p-8">
-          <h2 className="text-lg font-semibold text-slate-900 mb-6">Sign in to your account</h2>
-          {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>}
+
+        {/* Login Card */}
+        <div className="card p-8 bg-graphite-900/70 border-graphite-800 backdrop-blur-md shadow-2xl">
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-white">Sign In to Your Account</h2>
+            <p className="text-graphite-400 text-xs mt-1">
+              Sign in is completely optional. You can also analyze scans directly as a guest.
+            </p>
+          </div>
+
+          {error && (
+            <div className="mb-5 p-3.5 bg-red-950/40 border border-red-800/60 rounded-xl text-xs text-red-300 flex items-start gap-2.5">
+              <ShieldAlert className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label><input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="input" placeholder="researcher@institution.edu" /></div>
-            <div><label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label><input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="input" /></div>
-            <button type="submit" disabled={loading} className="btn-primary w-full mt-2">{loading ? "Signing in..." : "Sign in"}</button>
+            <div>
+              <label className="block text-xs font-medium text-graphite-300 mb-1.5 uppercase tracking-wider">Email Address</label>
+              <input 
+                type="email" 
+                required 
+                value={email} 
+                onChange={e => setEmail(e.target.value)} 
+                className="input text-white bg-graphite-950 border-graphite-700 placeholder-graphite-500" 
+                placeholder="researcher@institution.edu" 
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-graphite-300 mb-1.5 uppercase tracking-wider">Password</label>
+              <input 
+                type="password" 
+                required 
+                value={password} 
+                onChange={e => setPassword(e.target.value)} 
+                className="input text-white bg-graphite-950 border-graphite-700" 
+              />
+            </div>
+            <button 
+              type="submit" 
+              disabled={loading} 
+              className="btn-primary w-full mt-3 flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Signing in...
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </button>
           </form>
-          <p className="mt-6 text-center text-sm text-slate-500">No account? <Link to="/signup" className="text-blue-600 hover:text-blue-700 font-medium">Create one</Link></p>
+
+          <div className="mt-6 pt-5 border-t border-graphite-800 text-center space-y-3">
+            <p className="text-xs text-graphite-400">
+              Need an account? <Link to="/signup" className="text-clinical-400 hover:text-clinical-300 font-medium">Create research account</Link>
+            </p>
+            <div>
+              <Link 
+                to="/dashboard" 
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-graphite-300 hover:text-white transition-colors"
+              >
+                Or continue exploring as Guest <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
         </div>
-        <p className="text-center text-xs text-slate-400 mt-4">Research prototype only - not for clinical use</p>
+
+        <p className="text-center text-[11px] text-graphite-500 mt-6 font-mono">
+          Research Prototype — Quantum-Classical MRI Intelligence
+        </p>
       </div>
     </div>
   );

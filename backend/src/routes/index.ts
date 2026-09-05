@@ -6,7 +6,7 @@ import predictionRoutes from './predictions';
 import benchmarkRoutes from './benchmarks';
 import explanationRoutes from './explanations';
 import { pool } from '../db/pool';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { optionalAuthenticate, AuthRequest } from '../middleware/auth';
 
 export const router = Router();
 
@@ -18,7 +18,7 @@ router.use('/api/benchmarks', benchmarkRoutes);
 router.use('/api/explanations', explanationRoutes);
 
 // Experiments list
-router.get('/api/experiments', authenticate, async (_req: AuthRequest, res: Response) => {
+router.get('/api/experiments', optionalAuthenticate, async (_req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query('SELECT * FROM experiments ORDER BY created_at DESC LIMIT 50');
     res.json(result.rows);

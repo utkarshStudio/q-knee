@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { router } from './routes';
 import { pool, getDatabaseStatus } from './db/pool';
+import { runMigrations } from './db/migrate';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
@@ -53,7 +54,8 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Guest-Session-ID', 'x-guest-session-id'],
+  exposedHeaders: ['X-Guest-Session-ID'],
 }));
 
 app.use(express.json({ limit: '50mb' }));
@@ -117,10 +119,15 @@ app.get('/api/health/db', async (_req, res) => {
 // Routes
 app.use('/', router);
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`HQML Backend running on 0.0.0.0:${PORT}`);
-  console.log(`Allowed Origins: ${Array.from(allowedOriginsSet).join(', ')}`);
-  console.log(`ML Service: ${process.env.ML_SERVICE_URL || 'http://localhost:8000'}`);
+runMigrations().then(() => {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`HQML Backend running on 0.0.0.0:${PORT}`);
+    console.log(`Allowed Origins: ${Array.from(allowedOriginsSet).join(', ')}`);
+    console.log(`ML Service: ${process.env.ML_SERVICE_URL || 'http://localhost:8000'}`);
+  });
+}).catch(err => {
+  console.error('Failed to run migrations on startup:', err);
+  process.exit(1);
 });
 
 export default app;

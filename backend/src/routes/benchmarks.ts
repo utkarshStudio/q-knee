@@ -1,12 +1,12 @@
 import { Router, Response } from "express";
 import axios from "axios";
 import { pool } from "../db/pool";
-import { authenticate, AuthRequest } from "../middleware/auth";
+import { optionalAuthenticate, AuthRequest } from "../middleware/auth";
 
 const router = Router();
 
-// List benchmarks
-router.get("/", authenticate, async (_req: AuthRequest, res: Response) => {
+// List benchmarks (public research metrics)
+router.get("/", optionalAuthenticate, async (_req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query("SELECT * FROM benchmarks ORDER BY created_at DESC LIMIT 100");
     if (result.rows && result.rows.length > 0) {
@@ -45,7 +45,7 @@ router.get("/", authenticate, async (_req: AuthRequest, res: Response) => {
 });
 
 // List experiments (GET /api/experiments resolves here)
-router.get("/experiments-list", authenticate, async (_req: AuthRequest, res: Response) => {
+router.get("/experiments-list", optionalAuthenticate, async (_req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query("SELECT * FROM experiments ORDER BY created_at DESC LIMIT 50");
     res.json(result.rows);
@@ -55,7 +55,7 @@ router.get("/experiments-list", authenticate, async (_req: AuthRequest, res: Res
 });
 
 // Run benchmark
-router.post("/run", authenticate, async (req: AuthRequest, res: Response) => {
+router.post("/run", optionalAuthenticate, async (req: AuthRequest, res: Response) => {
   try {
     const mlUrl = process.env.ML_SERVICE_URL || "http://localhost:8000";
     const datasetConfigured = !!(process.env.RSNA_DATA_DIR && process.env.RSNA_DATA_DIR !== "" && process.env.RSNA_DATA_DIR !== "/path/to/rsna/knee/dataset");

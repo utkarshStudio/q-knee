@@ -14,7 +14,8 @@ const migrations = [
   `
   CREATE TABLE IF NOT EXISTS studies (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    guest_session_id VARCHAR(64),
     study_instance_uid VARCHAR(255),
     original_filename VARCHAR(500),
     storage_reference TEXT,
@@ -79,6 +80,20 @@ const migrations = [
     model_configuration JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
+  `,
+  `
+  DO $$
+  BEGIN
+    ALTER TABLE studies ALTER COLUMN user_id DROP NOT NULL;
+  EXCEPTION
+    WHEN OTHERS THEN NULL;
+  END $$;
+  `,
+  `
+  ALTER TABLE studies ADD COLUMN IF NOT EXISTS guest_session_id VARCHAR(64);
+  `,
+  `
+  CREATE INDEX IF NOT EXISTS idx_studies_guest_session ON studies(guest_session_id);
   `,
 ];
 

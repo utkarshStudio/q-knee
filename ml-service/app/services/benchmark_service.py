@@ -247,16 +247,7 @@ def run_benchmark(mode: str = "REAL") -> Dict[str, Any]:
         dataset_source = "RSNA Knee Abnormality Detection (Real Multi-Slice MRI)"
         execution_mode = "REAL"
     else:
-        # Isolated development test fallback
-        from app.services.demo_service import generate_demo_features
-        from sklearn.model_selection import train_test_split
-        X_all, y_all = generate_demo_features(n_samples=40, seed=99)
-        X_train_raw, X_test_raw, y_train, y_test = train_test_split(X_all, y_all, test_size=0.3, random_state=42, stratify=y_all)
-        pca = pca_handler.FeatureReductionPipeline(n_components=4)
-        X_train = pca.fit_transform(X_train_raw)
-        X_test = pca.transform(X_test_raw)
-        dataset_source = "Isolated Synthetic Development Test (No Clinical Significance)"
-        execution_mode = "DEMO"
+        raise ValueError("Real quantum features not found. Please train models on real dataset first.")
 
     n_train = len(y_train)
     n_test = len(y_test)

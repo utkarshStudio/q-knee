@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import AppLayout from "../components/layout/AppLayout";
 import api from "../lib/api";
 import { DisclaimerBanner } from "../components/ui/DisclaimerBanner";
 import { ModeBadge } from "../components/ui/ModeBadge";
 import { formatPercent } from "../lib/utils";
+import { Brain, Cpu, ArrowLeft, RefreshCw, Eye, Target, Layers, AlignLeft, LayoutGrid, ServerCrash } from "lucide-react";
 
 export default function ExplainabilityPage() {
   const { id } = useParams<{ id: string }>();
@@ -48,8 +49,9 @@ export default function ExplainabilityPage() {
   if (loading) {
     return (
       <AppLayout>
-        <div className="p-12 flex justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
+          <RefreshCw className="w-8 h-8 text-quantum-500 animate-spin" />
+          <p className="text-sm font-mono text-graphite-400 uppercase tracking-widest">Loading Explainability Data...</p>
         </div>
       </AppLayout>
     );
@@ -58,96 +60,129 @@ export default function ExplainabilityPage() {
   const gradcam = data?.explanation?.gradcam_reference || {};
   const attributions = data?.explanation?.attribution_data || [];
   const hasGradcam = gradcam.original || gradcam.heatmap || gradcam.overlay;
+  
+  const isAbnormal = data?.prediction?.predicted_class === "abnormal";
+  const isQuantum = data?.prediction?.model_name?.toLowerCase().includes("quantum") || data?.prediction?.model_type === "quantum";
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6 max-w-5xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Explainability & Interpretability (XAI)</h1>
-            <p className="text-slate-500 text-sm mt-1">
-              Multi-Level Explanations: Visual Grad-CAM Attention & 4D Latent Feature Attributions
+      <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1400px] mx-auto">
+        
+        {/* Header Area */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="space-y-3">
+            {data?.prediction?.study_id && (
+              <Link to={`/studies/${data.prediction.study_id}`} className="inline-flex items-center gap-1.5 text-xs font-semibold text-clinical-400 hover:text-clinical-300 transition-colors uppercase tracking-wider">
+                <ArrowLeft className="w-3.5 h-3.5" /> Back to Study
+              </Link>
+            )}
+            <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+              Explainable AI (XAI) Dashboard
+            </h1>
+            <p className="text-graphite-400 text-sm max-w-2xl">
+              Multi-level interpretability combining visual Grad-CAM spatial attention with quantitative 4D latent feature attributions (Taylor gradients).
             </p>
           </div>
-          {data && (
-            <button onClick={generate} disabled={generating} className="btn-secondary text-xs">
-              {generating ? "Regenerating..." : "Regenerate XAI"}
-            </button>
-          )}
+          
+          <div className="flex items-center gap-3">
+            {data && (
+              <button onClick={generate} disabled={generating} className="btn-secondary whitespace-nowrap">
+                {generating ? <><RefreshCw className="w-4 h-4 animate-spin" /> Generating...</> : <><RefreshCw className="w-4 h-4" /> Regenerate XAI</>}
+              </button>
+            )}
+          </div>
         </div>
 
         <DisclaimerBanner />
 
         {/* Conceptual Distinction Banner */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="card p-4 border-l-4 border-l-blue-500 bg-white">
-            <span className="text-xs font-semibold uppercase text-blue-600">Level 1: Visual Attention</span>
-            <h4 className="text-sm font-bold text-slate-900 mt-1">ResNet18 Grad-CAM</h4>
-            <p className="text-xs text-slate-500 mt-1">
-              Highlights 2D spatial regions with highest convolutional activation in the MRI slice.
+          <div className="card p-5 bg-gradient-to-br from-clinical-950/40 to-graphite-900/50 border-clinical-900/50">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-clinical-400 mb-2">
+              <Eye className="w-4 h-4" /> Level 1: Visual Attention
+            </div>
+            <h4 className="text-sm font-bold text-white mb-1">ResNet18 Grad-CAM</h4>
+            <p className="text-xs text-graphite-400 leading-relaxed">
+              Highlights 2D spatial regions with highest convolutional activation in the structural MRI slice.
             </p>
           </div>
-          <div className="card p-4 border-l-4 border-l-purple-500 bg-white">
-            <span className="text-xs font-semibold uppercase text-purple-600">Level 2: Feature Attribution</span>
-            <h4 className="text-sm font-bold text-slate-900 mt-1">4D PCA Decomposition</h4>
-            <p className="text-xs text-slate-500 mt-1">
-              Signed sensitivity showing how each principal component pushed the final score.
+          
+          <div className="card p-5 bg-gradient-to-br from-purple-950/30 to-graphite-900/50 border-purple-900/40">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-purple-400 mb-2">
+              <AlignLeft className="w-4 h-4" /> Level 2: Feature Attribution
+            </div>
+            <h4 className="text-sm font-bold text-white mb-1">4D PCA Decomposition</h4>
+            <p className="text-xs text-graphite-400 leading-relaxed">
+              Signed sensitivity analysis showing how each principal component influenced the classifier boundary.
             </p>
           </div>
-          <div className="card p-4 border-l-4 border-l-emerald-500 bg-white">
-            <span className="text-xs font-semibold uppercase text-emerald-600">Level 3: Classification</span>
-            <h4 className="text-sm font-bold text-slate-900 mt-1">Risk & Probability</h4>
-            <p className="text-xs text-slate-500 mt-1">
-              Final decision from the quantum/classical classifier with calibrated confidence.
+          
+          <div className="card p-5 bg-gradient-to-br from-emerald-950/30 to-graphite-900/50 border-emerald-900/40">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-400 mb-2">
+              <Target className="w-4 h-4" /> Level 3: Classification
+            </div>
+            <h4 className="text-sm font-bold text-white mb-1">Risk & Probability</h4>
+            <p className="text-xs text-graphite-400 leading-relaxed">
+              Final decision from the {isQuantum ? 'quantum' : 'classical'} classifier with calibrated probabilistic confidence.
             </p>
           </div>
         </div>
 
         {error && !data && (
-          <div className="card p-10 text-center space-y-4">
-            <div className="inline-flex p-3 rounded-full bg-blue-50 text-blue-600">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
+          <div className="card p-12 bg-graphite-900/50 border-graphite-800 flex flex-col items-center text-center space-y-6">
+            <div className="w-16 h-16 rounded-full bg-red-950/50 border border-red-900/50 flex items-center justify-center text-red-500">
+              <ServerCrash className="w-8 h-8" />
             </div>
-            <p className="text-slate-600 font-medium">{error}</p>
-            <button onClick={generate} disabled={generating} className="btn-primary">
-              {generating ? "Computing Grad-CAM & Attributions..." : "Generate Explanation"}
+            <div>
+              <p className="text-white font-bold text-lg mb-2">XAI Generation Failed</p>
+              <p className="text-graphite-400 text-sm max-w-md mx-auto">{error}</p>
+            </div>
+            <button onClick={generate} disabled={generating} className="btn-primary mt-2">
+              {generating ? <><RefreshCw className="w-4 h-4 animate-spin" /> Computing Grad-CAM & Attributions...</> : <><RefreshCw className="w-4 h-4" /> Generate Explanation</>}
             </button>
           </div>
         )}
 
         {data && (
           <div className="space-y-6">
+            
             {/* Prediction Summary Header */}
             {data.prediction && (
-              <div className="card p-5 bg-white">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Prediction Record</h2>
+              <div className="card p-6 relative overflow-hidden bg-graphite-900/80">
+                <div className={`absolute -right-20 -top-20 w-64 h-64 rounded-full blur-[80px] opacity-20 pointer-events-none ${
+                  isAbnormal ? "bg-amber-500" : "bg-emerald-500"
+                }`}></div>
+                
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 relative z-10 border-b border-graphite-800 pb-4">
+                  <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <Brain className="w-4 h-4 text-clinical-400" /> Reference Inference Record
+                  </h2>
                   <ModeBadge mode={data.prediction.mode} />
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
-                    <div className="text-xs text-slate-500">Screening Result</div>
-                    <div className={"text-base font-bold mt-0.5 " + (data.prediction.predicted_class === "abnormal" ? "text-red-600" : "text-emerald-600")}>
-                      {data.prediction.predicted_class === "abnormal" ? "Abnormality Detected" : "Normal Study"}
+                
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
+                  <div className="bg-graphite-950/50 rounded-xl p-4 border border-graphite-800">
+                    <div className="text-[10px] text-graphite-500 uppercase tracking-widest mb-1.5">Diagnosis</div>
+                    <div className={`text-lg font-bold tracking-tight ${isAbnormal ? "text-amber-400" : "text-emerald-400"}`}>
+                      {isAbnormal ? "Abnormality Detected" : "Normal Study"}
                     </div>
                   </div>
-                  <div className="bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
-                    <div className="text-xs text-slate-500">Abnormal Probability</div>
-                    <div className="text-base font-bold font-mono text-slate-900 mt-0.5">
+                  <div className="bg-graphite-950/50 rounded-xl p-4 border border-graphite-800">
+                    <div className="text-[10px] text-graphite-500 uppercase tracking-widest mb-1.5">p(Abnormal)</div>
+                    <div className="text-xl font-bold font-mono text-white">
                       {formatPercent(data.prediction.abnormal_probability)}
                     </div>
                   </div>
-                  <div className="bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
-                    <div className="text-xs text-slate-500">Confidence</div>
-                    <div className="text-base font-bold font-mono text-slate-900 mt-0.5">
+                  <div className="bg-graphite-950/50 rounded-xl p-4 border border-graphite-800">
+                    <div className="text-[10px] text-graphite-500 uppercase tracking-widest mb-1.5">Model Confidence</div>
+                    <div className="text-xl font-bold font-mono text-clinical-400">
                       {formatPercent(data.prediction.confidence)}
                     </div>
                   </div>
-                  <div className="bg-slate-50 rounded-lg p-3 text-center border border-slate-100">
-                    <div className="text-xs text-slate-500">Active Model</div>
-                    <div className="text-sm font-semibold text-slate-800 mt-1">
+                  <div className="bg-graphite-950/50 rounded-xl p-4 border border-graphite-800">
+                    <div className="text-[10px] text-graphite-500 uppercase tracking-widest mb-1.5">Architecture</div>
+                    <div className="text-sm font-bold text-white mt-1 flex items-center gap-2">
+                      {isQuantum ? <Cpu className="w-4 h-4 text-quantum-400" /> : <Layers className="w-4 h-4 text-graphite-400" />}
                       {data.prediction.model_name || "Hybrid Quantum VQC"}
                     </div>
                   </div>
@@ -155,165 +190,202 @@ export default function ExplainabilityPage() {
               </div>
             )}
 
-            {/* Level 1: Visual Grad-CAM Analysis */}
-            <div className="card p-5 bg-white space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                <div>
-                  <h2 className="font-bold text-slate-900 text-base flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
-                    Visual Grad-CAM Attention Map
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Target Layer: <code className="text-xs bg-slate-100 px-1 py-0.5 rounded font-mono">ResNet18.layer4[1].conv2</code> (Pre-Pooling Feature Map)
-                  </p>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+              
+              {/* Level 1: Visual Grad-CAM Analysis */}
+              <div className="card p-6 bg-graphite-900/50 flex flex-col h-[700px]">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-graphite-800 pb-4 mb-6">
+                  <div>
+                    <h2 className="font-bold text-white text-base flex items-center gap-2 mb-1">
+                      <Eye className="w-5 h-5 text-clinical-400" />
+                      Visual Grad-CAM Attention Map
+                    </h2>
+                    <p className="text-[11px] text-graphite-400 font-mono">
+                      Target: <span className="text-clinical-300">ResNet18.layer4[1].conv2</span> (Pre-Pool)
+                    </p>
+                  </div>
+                  
+                  {hasGradcam && (
+                    <div className="flex bg-graphite-950 rounded-lg p-1 border border-graphite-800 shrink-0">
+                      <button
+                        onClick={() => setActiveView("side-by-side")}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-all ${
+                          activeView === "side-by-side" ? "bg-clinical-600 text-white" : "text-graphite-400 hover:text-white"
+                        }`}
+                      >
+                        <LayoutGrid className="w-3.5 h-3.5" /> Side-by-Side
+                      </button>
+                      <button
+                        onClick={() => setActiveView("overlay-focus")}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-all ${
+                          activeView === "overlay-focus" ? "bg-clinical-600 text-white" : "text-graphite-400 hover:text-white"
+                        }`}
+                      >
+                        <Target className="w-3.5 h-3.5" /> Focus
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <button
-                    onClick={() => setActiveView("side-by-side")}
-                    className={`px-2.5 py-1 rounded transition-colors ${
-                      activeView === "side-by-side" ? "bg-blue-600 text-white font-semibold" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                    }`}
-                  >
-                    Side-by-Side
-                  </button>
-                  <button
-                    onClick={() => setActiveView("overlay-focus")}
-                    className={`px-2.5 py-1 rounded transition-colors ${
-                      activeView === "overlay-focus" ? "bg-blue-600 text-white font-semibold" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                    }`}
-                  >
-                    Overlay Focus
-                  </button>
+
+                <div className="flex-1 flex flex-col">
+                  {hasGradcam ? (
+                    activeView === "side-by-side" ? (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+                        <div className="bg-graphite-950/80 rounded-xl p-3 border border-graphite-800 flex flex-col">
+                          <p className="text-[10px] font-bold text-graphite-400 uppercase tracking-widest mb-3 text-center">1. Original</p>
+                          <div className="flex-1 bg-black rounded-lg overflow-hidden flex items-center justify-center relative">
+                            <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none"></div>
+                            <img
+                              src={`/api/explanations/${data.explanation.id}/image/original`}
+                              alt="Original MRI"
+                              className="w-full h-full object-contain relative z-10"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="bg-graphite-950/80 rounded-xl p-3 border border-graphite-800 flex flex-col">
+                          <p className="text-[10px] font-bold text-graphite-400 uppercase tracking-widest mb-3 text-center">2. Heatmap</p>
+                          <div className="flex-1 bg-black rounded-lg overflow-hidden flex items-center justify-center relative">
+                            <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none"></div>
+                            <img
+                              src={`/api/explanations/${data.explanation.id}/image/heatmap`}
+                              alt="Grad-CAM Heatmap"
+                              className="w-full h-full object-contain relative z-10"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="bg-clinical-950/20 rounded-xl p-3 border border-clinical-900/50 flex flex-col">
+                          <p className="text-[10px] font-bold text-clinical-400 uppercase tracking-widest mb-3 text-center">3. Overlay (50%)</p>
+                          <div className="flex-1 bg-black rounded-lg overflow-hidden flex items-center justify-center relative shadow-[0_0_20px_rgba(45,212,191,0.1)]">
+                            <img
+                              src={`/api/explanations/${data.explanation.id}/image/overlay`}
+                              alt="Grad-CAM Overlay"
+                              className="w-full h-full object-contain relative z-10"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex-1 bg-graphite-950/80 rounded-xl p-4 border border-clinical-900/30 flex flex-col items-center justify-center relative overflow-hidden">
+                        <div className="absolute inset-0 bg-clinical-900/5 pointer-events-none"></div>
+                        <p className="text-xs font-bold text-clinical-400 uppercase tracking-widest mb-4 z-10 bg-graphite-950/80 px-3 py-1 rounded-full border border-clinical-900/50">
+                          Superimposed Grad-CAM Attention
+                        </p>
+                        <div className="w-full max-w-md aspect-square bg-black rounded-xl overflow-hidden shadow-2xl relative z-10 border border-graphite-800">
+                          <img
+                            src={`/api/explanations/${data.explanation.id}/image/overlay`}
+                            alt="Grad-CAM Overlay Focus"
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-amber-950/20 rounded-xl border border-amber-900/30 text-amber-500/80">
+                      <Eye className="w-12 h-12 mb-4 opacity-50" />
+                      <p className="text-sm font-medium">Visual Grad-CAM Unavailable</p>
+                      <p className="text-xs mt-2 max-w-xs opacity-70">Image data is generating or not supported for this study modality. Refer to quantitative attributions.</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {hasGradcam ? (
-                activeView === "side-by-side" ? (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-slate-50 rounded-lg p-3 text-center border border-slate-200">
-                      <p className="text-xs font-semibold text-slate-700 mb-2">1. Original MRI Slice</p>
-                      <div className="aspect-square bg-black rounded-md overflow-hidden flex items-center justify-center">
-                        <img
-                          src={`/api/explanations/${data.explanation.id}/image/original`}
-                          alt="Original MRI"
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
+              {/* Level 2: 4D PCA / Quantum Feature Attributions */}
+              <div className="card p-6 bg-graphite-900/50 flex flex-col h-[700px]">
+                <div className="border-b border-graphite-800 pb-4 mb-6">
+                  <h2 className="font-bold text-white text-base flex items-center gap-2 mb-1">
+                    <AlignLeft className="w-5 h-5 text-purple-400" />
+                    4D Latent Feature Attributions
+                  </h2>
+                  <p className="text-[11px] text-graphite-400 font-mono">
+                    Taylor Gradient Sensitivity: Directional influence on boundary
+                  </p>
+                </div>
+
+                {attributions && attributions.length > 0 ? (
+                  <div className="flex-1 flex flex-col">
+                    
+                    {/* Legend */}
+                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-graphite-500 mb-4 px-2">
+                      <span>Principal Component</span>
+                      <span className="flex items-center gap-4">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-amber-500"></span> Pushes Abnormal
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Pushes Normal
+                        </span>
+                      </span>
                     </div>
 
-                    <div className="bg-slate-50 rounded-lg p-3 text-center border border-slate-200">
-                      <p className="text-xs font-semibold text-slate-700 mb-2">2. Grad-CAM Heatmap</p>
-                      <div className="aspect-square bg-black rounded-md overflow-hidden flex items-center justify-center">
-                        <img
-                          src={`/api/explanations/${data.explanation.id}/image/heatmap`}
-                          alt="Grad-CAM Heatmap"
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                    </div>
+                    <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                      {attributions.map((f: any, i: number) => {
+                        const score = f.attribution_score ?? f.attribution ?? 0;
+                        const isPositive = score >= 0;
+                        const absScore = Math.abs(score);
+                        const barWidth = Math.min(100, Math.max(2, absScore * 250)); // Scaler for visualization
 
-                    <div className="bg-slate-50 rounded-lg p-3 text-center border border-blue-200 bg-blue-50/30">
-                      <p className="text-xs font-semibold text-blue-900 mb-2">3. Blended Overlay (50%)</p>
-                      <div className="aspect-square bg-black rounded-md overflow-hidden flex items-center justify-center">
-                        <img
-                          src={`/api/explanations/${data.explanation.id}/image/overlay`}
-                          alt="Grad-CAM Overlay"
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
+                        return (
+                          <div key={i} className="p-4 bg-graphite-950/80 rounded-xl border border-graphite-800 relative overflow-hidden group hover:border-graphite-700 transition-colors">
+                            {/* Ambient glow based on direction */}
+                            <div className={`absolute -right-10 -top-10 w-24 h-24 blur-2xl opacity-10 rounded-full transition-opacity group-hover:opacity-20 ${
+                              isPositive ? 'bg-amber-500' : 'bg-emerald-500'
+                            }`}></div>
+
+                            <div className="flex items-center justify-between mb-3 relative z-10">
+                              <div className="flex items-center gap-3">
+                                <span className="font-mono text-xs font-bold text-white bg-graphite-800 px-2.5 py-1 rounded-md border border-graphite-700">
+                                  {f.feature_name || f.feature_label || `PC${i + 1}`}
+                                </span>
+                                {f.input_value !== undefined && (
+                                  <span className="text-graphite-500 font-mono text-[10px]">
+                                    val: {f.input_value.toFixed(3)}
+                                  </span>
+                                )}
+                              </div>
+                              <div className={`font-mono font-bold text-sm ${isPositive ? "text-amber-400" : "text-emerald-400"}`}>
+                                {isPositive ? "+" : ""}{score.toFixed(4)}
+                              </div>
+                            </div>
+
+                            <div className="w-full h-2 bg-graphite-900 rounded-full overflow-hidden flex relative z-10">
+                              {/* Center line */}
+                              <div className="absolute left-1/2 top-0 bottom-0 w-px bg-graphite-700 z-20"></div>
+                              
+                              {/* Left half (Negative / Normal) */}
+                              <div className="w-1/2 h-full flex justify-end pr-1">
+                                {!isPositive && (
+                                  <div
+                                    className="h-full bg-emerald-500 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                                    style={{ width: `${barWidth}%` }}
+                                  />
+                                )}
+                              </div>
+                              
+                              {/* Right half (Positive / Abnormal) */}
+                              <div className="w-1/2 h-full flex justify-start pl-1">
+                                {isPositive && (
+                                  <div
+                                    className="h-full bg-amber-500 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+                                    style={{ width: `${barWidth}%` }}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ) : (
-                  <div className="max-w-md mx-auto bg-slate-50 rounded-lg p-4 text-center border border-blue-200">
-                    <p className="text-xs font-bold text-slate-800 mb-2">Superimposed Grad-CAM Attention</p>
-                    <div className="aspect-square bg-black rounded-lg overflow-hidden flex items-center justify-center">
-                      <img
-                        src={`/api/explanations/${data.explanation.id}/image/overlay`}
-                        alt="Grad-CAM Overlay Focus"
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
+                  <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-graphite-950/50 rounded-xl border border-graphite-800 text-graphite-500">
+                    <AlignLeft className="w-12 h-12 mb-4 opacity-50" />
+                    <p className="text-sm font-medium text-graphite-300">No Feature Attributions</p>
+                    <p className="text-xs mt-2 max-w-xs">Latent space attributions are currently unavailable for this study.</p>
                   </div>
-                )
-              ) : (
-                <div className="p-6 text-center bg-amber-50 rounded-lg border border-amber-200 text-amber-800 text-xs">
-                  Visual Grad-CAM image is currently generating or unavailable for this study format. Quantitative feature attributions are displayed below.
-                </div>
-              )}
-            </div>
-
-            {/* Level 2: 4D PCA / Quantum Feature Attributions */}
-            <div className="card p-5 bg-white space-y-4">
-              <div className="border-b border-slate-100 pb-3">
-                <h2 className="font-bold text-slate-900 text-base flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
-                  4D Latent Feature Attributions (Taylor Gradient Sensitivity)
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Directional influence of each compressed PCA feature on the model probability score.
-                </p>
+                )}
               </div>
-
-              {attributions && attributions.length > 0 ? (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between text-xs text-slate-500 px-1">
-                    <span>Feature Component</span>
-                    <span className="flex items-center gap-4">
-                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block"></span> Pushes Abnormal</span>
-                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block"></span> Pushes Normal</span>
-                    </span>
-                  </div>
-
-                  <div className="space-y-3">
-                    {attributions.map((f: any, i: number) => {
-                      const score = f.attribution_score ?? f.attribution ?? 0;
-                      const isPositive = score >= 0;
-                      const absScore = Math.abs(score);
-                      const barWidth = Math.min(100, Math.max(8, absScore * 250));
-
-                      return (
-                        <div key={i} className="p-3 bg-slate-50 rounded-lg border border-slate-100 space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200">
-                                {f.feature_name || f.feature_label || `PC${i + 1}`}
-                              </span>
-                              {f.input_value !== undefined && (
-                                <span className="text-slate-500 font-mono text-[11px]">
-                                  value: {f.input_value.toFixed(3)}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 font-mono font-bold">
-                              <span className={isPositive ? "text-red-600" : "text-blue-600"}>
-                                {isPositive ? "+" : ""}{score.toFixed(4)}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="h-2.5 bg-slate-200/70 rounded-full overflow-hidden flex">
-                            {isPositive ? (
-                              <div
-                                className="h-full bg-red-500 rounded-full transition-all duration-500"
-                                style={{ width: `${barWidth}%` }}
-                              />
-                            ) : (
-                              <div
-                                className="h-full bg-blue-500 rounded-full transition-all duration-500"
-                                style={{ width: `${barWidth}%` }}
-                              />
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-xs text-slate-400 p-4 text-center">
-                  No feature attributions computed yet.
-                </div>
-              )}
             </div>
           </div>
         )}

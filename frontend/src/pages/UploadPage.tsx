@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AppLayout from "../components/layout/AppLayout";
 import api from "../lib/api";
 import { DisclaimerBanner } from "../components/ui/DisclaimerBanner";
+import { UploadCloud, FileType, CheckCircle2, XCircle, Loader2, ArrowRight, X } from "lucide-react";
 
 const ALLOWED_EXTENSIONS = [".dcm", ".dicom", ".npy", ".png", ".jpg", ".jpeg"];
 const MAX_FILE_SIZE_MB = 100;
@@ -17,10 +18,10 @@ export default function UploadPage() {
   const [success, setSuccess] = useState("");
 
   const steps = [
-    { title: "Upload Files", desc: "Transmitting study data to server" },
-    { title: "Volume Parsing", desc: "Reading DICOM/NPY metadata & slice ordering" },
-    { title: "Preprocessing", desc: "128x128 spatial resizing & intensity normalization" },
-    { title: "Feature Extraction", desc: "Generating ResNet18 512D study embeddings" },
+    { title: "UPLOAD", desc: "Transmitting study data", icon: UploadCloud },
+    { title: "VALIDATE", desc: "Parsing metadata & ordering", icon: FileType },
+    { title: "PREPROCESS", desc: "128x128 resizing & normalization", icon: Loader2 },
+    { title: "FEATURE EXTRACTION", desc: "ResNet18 512D embeddings", icon: CheckCircle2 },
   ];
 
   const validateFiles = (newFiles: File[]): { valid: File[]; errorMsg?: string } => {
@@ -111,147 +112,198 @@ export default function UploadPage() {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6 max-w-3xl">
+      <div className="p-6 md:p-8 space-y-8 max-w-[1200px] mx-auto">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Upload MRI Study</h1>
-          <p className="text-slate-500 text-sm mt-1">
-            Clinical-research workflow: Upload knee MRI volumes in DICOM (.dcm), NPY (.npy), or standard image formats.
+          <h1 className="text-3xl font-bold text-white tracking-tight">New MRI Analysis</h1>
+          <p className="text-graphite-400 mt-2 text-sm max-w-2xl">
+            Upload knee MRI volumes for automated quantum-classical analysis. 
+            The system accepts DICOM series (.dcm) or pre-processed 3D NumPy Volumes (.npy).
           </p>
         </div>
 
         <DisclaimerBanner />
 
-        {/* Upload Dropzone */}
-        <div
-          onDrop={onDrop}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => setDragging(false)}
-          className={`card p-10 text-center border-2 border-dashed transition-all cursor-pointer ${
-            dragging
-              ? "border-blue-500 bg-blue-50/70"
-              : "border-slate-300 hover:border-blue-400 bg-white"
-          }`}
-        >
-          <div className="mx-auto w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 mb-3">
-            <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-          </div>
-          <p className="text-slate-800 font-semibold text-base">Drag and drop MRI files here</p>
-          <p className="text-slate-400 text-xs mt-1">
-            Supported formats: DICOM series (<code className="text-[11px] bg-slate-100 px-1 py-0.5 rounded">.dcm</code>), 3D NumPy Volumes (<code className="text-[11px] bg-slate-100 px-1 py-0.5 rounded">.npy</code>), PNG, JPEG
-          </p>
-          <label className="mt-5 btn-primary inline-flex items-center gap-2 cursor-pointer text-xs">
-            <span>Browse Files</span>
-            <input
-              type="file"
-              multiple
-              accept=".dcm,.dicom,.npy,.png,.jpg,.jpeg,image/*"
-              onChange={onFileChange}
-              className="sr-only"
-            />
-          </label>
-        </div>
-
-        {/* Selected Files List */}
-        {files.length > 0 && (
-          <div className="card p-5 bg-white space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h3 className="font-bold text-slate-800 text-sm">
-                Selected Series ({files.length} {files.length === 1 ? "file" : "files"})
-              </h3>
-              <button
-                type="button"
-                onClick={() => setFiles([])}
-                className="text-xs text-red-500 hover:underline"
-              >
-                Clear all
-              </button>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Upload Dropzone */}
+            <div
+              onDrop={onDrop}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragging(true);
+              }}
+              onDragLeave={() => setDragging(false)}
+              className={`relative overflow-hidden rounded-2xl border-2 border-dashed transition-all duration-300 cursor-pointer flex flex-col items-center justify-center p-12 min-h-[400px] ${
+                dragging
+                  ? "border-clinical-500 bg-clinical-950/20"
+                  : "border-graphite-700 hover:border-graphite-500 bg-graphite-900/50"
+              }`}
+            >
+              <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none"></div>
+              
+              <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 transition-all duration-300 relative z-10 ${
+                dragging ? "bg-clinical-600 shadow-[0_0_30px_rgba(45,212,191,0.4)]" : "bg-graphite-800"
+              }`}>
+                <UploadCloud className={`w-10 h-10 ${dragging ? "text-white" : "text-graphite-400"}`} />
+              </div>
+              
+              <h3 className="text-xl font-bold text-white mb-2 relative z-10">Drop MRI study here</h3>
+              <p className="text-graphite-400 text-sm mb-8 text-center max-w-sm relative z-10">
+                DICOM / NPY / supported files up to {MAX_FILE_SIZE_MB}MB
+              </p>
+              
+              <label className="relative z-10 btn-primary px-6 py-2.5 cursor-pointer">
+                <span>Browse files</span>
+                <input
+                  type="file"
+                  multiple
+                  accept=".dcm,.dicom,.npy,.png,.jpg,.jpeg,image/*"
+                  onChange={onFileChange}
+                  className="sr-only"
+                />
+              </label>
             </div>
-            <div className="divide-y divide-slate-100 max-h-48 overflow-y-auto">
-              {files.map((f, i) => (
-                <div key={i} className="flex items-center justify-between py-2 text-xs">
-                  <div className="flex items-center gap-2 truncate">
-                    <span className="font-mono text-slate-400">#{i + 1}</span>
-                    <span className="font-medium text-slate-800 truncate">{f.name}</span>
-                    <span className="text-slate-400">({(f.size / 1024).toFixed(1)} KB)</span>
-                  </div>
+
+            {/* Messages */}
+            {error && (
+              <div className="p-4 bg-red-950/50 border border-red-900 rounded-xl text-sm text-red-200 flex items-start gap-3 backdrop-blur-sm">
+                <XCircle className="w-5 h-5 text-red-500 shrink-0" />
+                <p>{error}</p>
+              </div>
+            )}
+            
+            {success && (
+              <div className="p-4 bg-emerald-950/50 border border-emerald-900 rounded-xl text-sm text-emerald-200 flex items-start gap-3 backdrop-blur-sm">
+                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                <p>{success}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Right Panel */}
+          <div className="space-y-6">
+            
+            {/* Selected Files List */}
+            <div className="card flex flex-col h-[400px]">
+              <div className="flex items-center justify-between p-4 border-b border-graphite-800 bg-graphite-900/50 rounded-t-xl">
+                <h3 className="font-semibold text-white text-sm">
+                  Study Files <span className="text-graphite-500 ml-1">({files.length})</span>
+                </h3>
+                {files.length > 0 && (
                   <button
                     type="button"
-                    onClick={() => removeFile(i)}
-                    className="text-slate-400 hover:text-red-500 ml-2"
+                    onClick={() => setFiles([])}
+                    className="text-xs text-graphite-400 hover:text-red-400 transition-colors"
                   >
-                    &#10005;
+                    Clear
                   </button>
-                </div>
-              ))}
+                )}
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-2">
+                {files.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-graphite-500">
+                    <FileType className="w-8 h-8 mb-2 opacity-50" />
+                    <p className="text-sm">No files selected</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {files.map((f, i) => (
+                      <div key={i} className="flex items-center justify-between p-2 rounded-lg hover:bg-graphite-800/50 group transition-colors">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <FileType className="w-4 h-4 text-graphite-500 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-graphite-200 truncate pr-2">{f.name}</p>
+                            <p className="text-[10px] text-graphite-500">{(f.size / 1024).toFixed(1)} KB</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(i)}
+                          className="text-graphite-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all shrink-0 p-1"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              <div className="p-4 border-t border-graphite-800 bg-graphite-900/50 rounded-b-xl">
+                <button
+                  type="button"
+                  onClick={handleUpload}
+                  disabled={uploading || !files.length}
+                  className="w-full btn-primary justify-center group"
+                >
+                  {uploading ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Processing...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      Start Analysis <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
+
           </div>
-        )}
+        </div>
 
         {/* Processing Stepper if Uploading */}
         {uploading && (
-          <div className="card p-6 bg-slate-50 border border-blue-200 space-y-4">
-            <div className="flex items-center gap-2 text-blue-900 font-bold text-sm">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
-              <span>Automated Ingestion &amp; Feature Extraction Pipeline</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {steps.map((step, idx) => (
-                <div
-                  key={idx}
-                  className={`p-3 rounded-lg border text-xs transition-colors ${
-                    idx < currentStep
-                      ? "bg-emerald-50 border-emerald-300 text-emerald-800"
-                      : idx === currentStep
-                      ? "bg-blue-50 border-blue-400 text-blue-900 shadow-sm"
-                      : "bg-white border-slate-200 text-slate-400"
-                  }`}
-                >
-                  <div className="font-bold flex items-center gap-1.5">
-                    <span>{idx < currentStep ? "✓" : `${idx + 1}.`}</span>
-                    <span>{step.title}</span>
+          <div className="card p-8 border-clinical-900/50 bg-graphite-900/80 relative overflow-hidden">
+            <div className="absolute inset-0 bg-clinical-900/10 animate-pulse pointer-events-none"></div>
+            
+            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-3 relative z-10">
+              <Loader2 className="w-5 h-5 text-clinical-400 animate-spin" />
+              Automated Ingestion Pipeline
+            </h3>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
+              {steps.map((step, idx) => {
+                const Icon = step.icon;
+                const isCompleted = idx < currentStep;
+                const isActive = idx === currentStep;
+                const isPending = idx > currentStep;
+                
+                return (
+                  <div
+                    key={idx}
+                    className={`p-4 rounded-xl border transition-all duration-500 ${
+                      isCompleted
+                        ? "bg-clinical-950/30 border-clinical-800/50 text-clinical-400"
+                        : isActive
+                        ? "bg-deepblue-950/40 border-deepblue-500/50 text-white shadow-[0_0_20px_rgba(59,130,246,0.15)] scale-[1.02]"
+                        : "bg-graphite-900/50 border-graphite-800 text-graphite-500"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-mono tracking-wider font-bold">
+                        {isCompleted ? "DONE" : isActive ? "IN PROGRESS" : "PENDING"}
+                      </span>
+                      {isActive && <span className="w-2 h-2 rounded-full bg-deepblue-400 animate-ping"></span>}
+                    </div>
+                    
+                    <div className="font-bold mb-1 flex items-center gap-2 text-sm">
+                      <Icon className={`w-4 h-4 ${isCompleted ? "text-clinical-400" : isActive ? "text-deepblue-400" : "text-graphite-600"}`} />
+                      {step.title}
+                    </div>
+                    
+                    <p className={`text-xs ${isCompleted ? "text-clinical-600" : isActive ? "text-graphite-300" : "text-graphite-600"}`}>
+                      {step.desc}
+                    </p>
                   </div>
-                  <div className="text-[10px] mt-1 opacity-80">{step.desc}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* Messages */}
-        {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
-            <span className="font-bold">Error:</span> {error}
-          </div>
-        )}
-        {success && (
-          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-start gap-2">
-            <span className="font-bold">Success:</span> {success}
-          </div>
-        )}
-
-        {/* Action Button */}
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <button
-            type="button"
-            onClick={() => navigate("/studies")}
-            className="btn-secondary text-xs"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleUpload}
-            disabled={uploading || !files.length}
-            className="btn-primary text-xs"
-          >
-            {uploading ? "Ingesting & Extracting Features..." : "Upload & Preprocess Study"}
-          </button>
-        </div>
       </div>
     </AppLayout>
   );

@@ -10,7 +10,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'hqml-default-jwt-secret-key-minimu
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 router.post('/signup', async (req: Request, res: Response) => {
-  const { email, password, role = 'researcher' } = req.body;
+  const { email, password } = req.body;
+  const role = 'researcher'; // Force 'researcher' role for public signups (No admin creation)
   if (!email || typeof email !== 'string' || !password || typeof password !== 'string') {
     res.status(400).json({ error: 'Email and password required' });
     return;

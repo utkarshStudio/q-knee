@@ -2,18 +2,38 @@ import { Router, Response } from 'express';
 import axios from 'axios';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { pool } from '../db/pool';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { optionalAuthenticate, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
+function getExplanationStudyOwnership(req: AuthRequest, paramStartIndex = 2): { sql: string; params: any[] } {
+  if (req.user?.id) {
+    if (req.guestSessionId) {
+      return {
+        sql: `(s.user_id = $${paramStartIndex} OR (s.user_id IS NULL AND s.guest_session_id = $${paramStartIndex + 1}))`,
+        params: [req.user.id, req.guestSessionId]
+      };
+    }
+    return {
+      sql: `s.user_id = $${paramStartIndex}`,
+      params: [req.user.id]
+    };
+  }
+  return {
+    sql: `(s.user_id IS NULL AND s.guest_session_id = $${paramStartIndex})`,
+    params: [req.guestSessionId || '']
+  };
+}
+
 // GET explanation for a prediction
-router.get('/:predictionId', authenticate, async (req: AuthRequest, res: Response) => {
+router.get('/:predictionId', optionalAuthenticate, async (req: AuthRequest, res: Response) => {
   try {
-    // Check ownership
+    const ownership = getExplanationStudyOwnership(req, 2);
     const predResult = await pool.query(
-      'SELECT p.*, s.user_id FROM predictions p JOIN studies s ON p.study_id = s.id WHERE p.id = $1 AND s.user_id = $2',
-      [req.params.predictionId, req.user!.id]
+      `SELECT p.*, s.user_id, s.guest_session_id FROM predictions p JOIN studies s ON p.study_id = s.id WHERE p.id = $1 AND ${ownership.sql}`,
+      [req.params.predictionId, ...ownership.params]
     );
     if (predResult.rows.length === 0) { res.status(404).json({ error: 'Prediction not found' }); return; }
     const prediction = predResult.rows[0];
@@ -28,11 +48,12 @@ router.get('/:predictionId', authenticate, async (req: AuthRequest, res: Respons
 });
 
 // Also handle /api/predictions/:id/explain
-router.get('/:predictionId/explain', authenticate, async (req: AuthRequest, res: Response) => {
+router.get('/:predictionId/explain', optionalAuthenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const ownership = getExplanationStudyOwnership(req, 2);
     const predResult = await pool.query(
-      'SELECT p.*, s.user_id, s.storage_reference FROM predictions p JOIN studies s ON p.study_id = s.id WHERE p.id = $1 AND s.user_id = $2',
-      [req.params.predictionId, req.user!.id]
+      `SELECT p.*, s.user_id, s.guest_session_id, s.storage_reference FROM predictions p JOIN studies s ON p.study_id = s.id WHERE p.id = $1 AND ${ownership.sql}`,
+      [req.params.predictionId, ...ownership.params]
     );
     if (predResult.rows.length === 0) { res.status(404).json({ error: 'Prediction not found' }); return; }
     const prediction = predResult.rows[0];
@@ -47,11 +68,12 @@ router.get('/:predictionId/explain', authenticate, async (req: AuthRequest, res:
 });
 
 // POST generate explanation
-router.post('/:predictionId/explain', authenticate, async (req: AuthRequest, res: Response) => {
+router.post('/:predictionId/explain', optionalAuthenticate, async (req: AuthRequest, res: Response) => {
   try {
+    const ownership = getExplanationStudyOwnership(req, 2);
     const predResult = await pool.query(
-      'SELECT p.*, s.user_id, s.storage_reference FROM predictions p JOIN studies s ON p.study_id = s.id WHERE p.id = $1 AND s.user_id = $2',
-      [req.params.predictionId, req.user!.id]
+      `SELECT p.*, s.user_id, s.guest_session_id, s.storage_reference FROM predictions p JOIN studies s ON p.study_id = s.id WHERE p.id = $1 AND ${ownership.sql}`,
+      [req.params.predictionId, ...ownership.params]
     );
     if (predResult.rows.length === 0) { res.status(404).json({ error: 'Prediction not found' }); return; }
     const prediction = predResult.rows[0];
@@ -60,12 +82,21 @@ router.post('/:predictionId/explain', authenticate, async (req: AuthRequest, res
     try { filePaths = JSON.parse(prediction.storage_reference || '[]'); } catch {}
 
     const mlUrl = process.env.ML_SERVICE_URL || 'http://localhost:8000';
-    const mlRes = await axios.post(`${mlUrl}/explain`, {
-      prediction_id: prediction.id,
-      study_id: prediction.study_id,
-      file_paths: filePaths,
-      model_type: prediction.model_name?.includes('VQC') || prediction.model_name?.includes('Quantum') ? 'quantum' : 'classical',
-    }, { timeout: 120000 });
+    
+    const formExplain = new FormData();
+    formExplain.append('prediction_id', prediction.id);
+    formExplain.append('study_id', prediction.study_id);
+    formExplain.append('model_type', prediction.model_name?.includes('VQC') || prediction.model_name?.includes('Quantum') ? 'quantum' : 'classical');
+    for (const p of filePaths) {
+      if (fs.existsSync(p)) {
+        const fileBytes = fs.readFileSync(p);
+        const hash = crypto.createHash('sha256').update(fileBytes).digest('hex');
+        console.log(`BACKEND RECEIVED HASH (explain, ${path.basename(p)}): ${hash}`);
+        formExplain.append('files', new Blob([fileBytes], { type: 'application/octet-stream' }), path.basename(p));
+      }
+    }
+
+    const mlRes = await axios.post(`${mlUrl}/explain`, formExplain, { timeout: 120000 });
 
     const explData = mlRes.data;
 
@@ -83,12 +114,13 @@ router.post('/:predictionId/explain', authenticate, async (req: AuthRequest, res
 });
 
 // Serve explanation images (local file or proxied from ML microservice)
-router.get('/:explanationId/image/:type', authenticate, async (req: AuthRequest, res: Response) => {
+router.get('/:explanationId/image/:type', optionalAuthenticate, async (req: AuthRequest, res: Response) => {
   const { explanationId, type } = req.params;
   try {
+    const ownership = getExplanationStudyOwnership(req, 2);
     let explResult = await pool.query(
-      'SELECT e.*, p.id as pred_id, s.user_id FROM explanations e JOIN predictions p ON e.prediction_id = p.id JOIN studies s ON p.study_id = s.id WHERE e.id = $1 AND s.user_id = $2',
-      [explanationId, req.user!.id]
+      `SELECT e.*, p.id as pred_id, s.user_id, s.guest_session_id FROM explanations e JOIN predictions p ON e.prediction_id = p.id JOIN studies s ON p.study_id = s.id WHERE e.id = $1 AND ${ownership.sql}`,
+      [explanationId, ...ownership.params]
     );
     if (explResult.rows.length === 0) {
       explResult = await pool.query('SELECT e.*, p.id as pred_id FROM explanations e JOIN predictions p ON e.prediction_id = p.id WHERE e.id = $1', [explanationId]);

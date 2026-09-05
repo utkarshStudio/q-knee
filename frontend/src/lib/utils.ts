@@ -37,6 +37,11 @@ export function resolveImageUrl(path?: string): string | undefined {
     const separator = cleanPath.includes("?") ? "&" : "?";
     return `${cleanBase}${cleanPath}${separator}token=${encodeURIComponent(token)}`;
   }
+  const guestSessionId = isBrowser ? localStorage.getItem("qknee_guest_session_id") : null;
+  if (guestSessionId) {
+    const separator = cleanPath.includes("?") ? "&" : "?";
+    return `${cleanBase}${cleanPath}${separator}guest_session_id=${encodeURIComponent(guestSessionId)}`;
+  }
   return `${cleanBase}${cleanPath}`;
 }
 

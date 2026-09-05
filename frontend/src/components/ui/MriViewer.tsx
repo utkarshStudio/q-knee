@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { resolveImageUrl } from "../../lib/utils";
+import { Maximize, RotateCcw, ZoomIn, ZoomOut, Eye, Settings2, SlidersHorizontal, Image as ImageIcon, XCircle } from "lucide-react";
 
 interface MriViewerProps {
   studyId?: string | number;
@@ -36,6 +37,7 @@ export function MriViewer({
     overlayImageUrl ? "overlay" : "original"
   );
   const [imageLoadError, setImageLoadError] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     const clamped = Math.max(0, Math.min(effectiveTotal - 1, currentSlice));
@@ -43,7 +45,6 @@ export function MriViewer({
   }, [currentSlice, effectiveTotal]);
 
   useEffect(() => {
-    // If overlay becomes available, switch to overlay if user was on default original
     if (overlayImageUrl && viewMode === "original") {
       setViewMode("overlay");
     }
@@ -62,7 +63,6 @@ export function MriViewer({
     [effectiveTotal, onSliceChange]
   );
 
-  // Keyboard navigation for slice stepping
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (effectiveTotal <= 1) return;
@@ -82,12 +82,6 @@ export function MriViewer({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  useEffect(() => {
-    if (originalImageUrl) {
-      console.log("DICOM PREVIEW URL:", originalImageUrl);
-    }
-  }, [originalImageUrl]);
-
   const hasCam = Boolean(
     viewMode === "heatmap" ? heatmapImageUrl : viewMode === "overlay" ? overlayImageUrl : false
   );
@@ -102,189 +96,175 @@ export function MriViewer({
   const activeImageUrl = resolveImageUrl(rawActiveUrl);
 
   return (
-    <div className="bg-slate-900 text-slate-100 rounded-2xl overflow-hidden shadow-xl border border-slate-800 flex flex-col">
+    <div className={`bg-graphite-950 text-graphite-100 rounded-2xl overflow-hidden shadow-2xl border border-graphite-800 flex flex-col transition-all duration-300 ${isFullscreen ? 'fixed inset-4 z-50' : 'relative'}`}>
+      
       {/* Viewer Header / Toolbar */}
-      <div className="bg-slate-950/80 px-4 py-3 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-300">MRI Viewport</span>
+      <div className="bg-graphite-900 px-4 py-3 border-b border-graphite-800 flex flex-wrap items-center justify-between gap-4 select-none">
+        
+        {/* Left: Status & Identity */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-graphite-950 border border-graphite-800">
+            <span className="w-2 h-2 rounded-full bg-clinical-500 shadow-[0_0_8px_rgba(20,184,166,0.8)]"></span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-graphite-300 font-mono">Workspace</span>
           </div>
-          <span className="text-xs text-slate-300 font-mono bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700/50">
-            Slice {sliceIndex + 1} / {effectiveTotal}
-          </span>
+          
+          <div className="hidden sm:flex items-center gap-1 text-[11px] font-mono text-graphite-400">
+            <span>Slice</span>
+            <span className="text-white bg-graphite-800 px-1.5 py-0.5 rounded ml-1">{sliceIndex + 1}</span>
+            <span className="mx-1">/</span>
+            <span>{effectiveTotal}</span>
+          </div>
         </div>
 
-        {/* Anatomical Plane Selection */}
-        <div className="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-800 text-xs">
-          <button
-            type="button"
-            onClick={() => onPlaneChange && onPlaneChange("sagittal")}
-            className={`px-3 py-1 rounded-md transition-colors ${
-              activePlane === "sagittal"
-                ? "bg-blue-600 text-white font-semibold shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-            title="Sagittal View (Primary ACL diagnostic slice orientation)"
-          >
-            Sagittal
-          </button>
-          <button
-            type="button"
-            disabled={!has3dVolume}
-            onClick={() => has3dVolume && onPlaneChange && onPlaneChange("axial")}
-            className={`px-3 py-1 rounded-md transition-colors ${
-              !has3dVolume
-                ? "text-slate-600 opacity-60 cursor-not-allowed"
-                : activePlane === "axial"
-                ? "bg-blue-600 text-white font-semibold shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-            title={has3dVolume ? "Axial Plane View" : "Multiplanar axial reconstruction unavailable for 2D single series"}
-          >
-            Axial {!has3dVolume && "(2D Only)"}
-          </button>
-          <button
-            type="button"
-            disabled={!has3dVolume}
-            onClick={() => has3dVolume && onPlaneChange && onPlaneChange("coronal")}
-            className={`px-3 py-1 rounded-md transition-colors ${
-              !has3dVolume
-                ? "text-slate-600 opacity-60 cursor-not-allowed"
-                : activePlane === "coronal"
-                ? "bg-blue-600 text-white font-semibold shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
-            }`}
-            title={has3dVolume ? "Coronal Plane View" : "Multiplanar coronal reconstruction unavailable for 2D single series"}
-          >
-            Coronal {!has3dVolume && "(2D Only)"}
-          </button>
+        {/* Center: Anatomical Planes */}
+        <div className="flex items-center bg-graphite-950 rounded-lg p-1 border border-graphite-800">
+          {(["axial", "coronal", "sagittal"] as const).map((plane) => (
+            <button
+              key={plane}
+              type="button"
+              disabled={!has3dVolume && plane !== "sagittal"} // Assuming sagittal is default 2D
+              onClick={() => onPlaneChange && onPlaneChange(plane)}
+              className={`px-4 py-1.5 rounded-md text-xs font-medium uppercase tracking-wider transition-all duration-200 ${
+                activePlane === plane
+                  ? "bg-clinical-600 text-white shadow-md shadow-clinical-900/50"
+                  : !has3dVolume && plane !== "sagittal"
+                  ? "text-graphite-600 opacity-50 cursor-not-allowed"
+                  : "text-graphite-400 hover:text-white hover:bg-graphite-800"
+              }`}
+            >
+              {plane}
+            </button>
+          ))}
         </div>
 
-        {/* Layer / CAM Toggle */}
-        <div className="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-800 text-xs">
-          <button
-            type="button"
-            onClick={() => setViewMode("original")}
-            className={`px-2.5 py-1 rounded-md transition-colors ${
-              viewMode === "original" ? "bg-slate-700 text-white font-medium" : "text-slate-400 hover:text-slate-200"
-            }`}
-            title="Original MRI pixel view"
+        {/* Right: View Modes & Controls */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center bg-graphite-950 rounded-lg p-1 border border-graphite-800">
+            <button
+              type="button"
+              onClick={() => setViewMode("original")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-all ${
+                viewMode === "original" ? "bg-graphite-700 text-white" : "text-graphite-400 hover:text-white"
+              }`}
+            >
+              <ImageIcon className="w-3.5 h-3.5" /> Original
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("heatmap")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-all ${
+                viewMode === "heatmap" ? "bg-amber-700 text-white" : "text-graphite-400 hover:text-white"
+              }`}
+            >
+              <Eye className="w-3.5 h-3.5" /> Heatmap
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("overlay")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-all ${
+                viewMode === "overlay" ? "bg-deepblue-600 text-white" : "text-graphite-400 hover:text-white"
+              }`}
+            >
+              <Settings2 className="w-3.5 h-3.5" /> Overlay
+            </button>
+          </div>
+          
+          <div className="w-px h-6 bg-graphite-800"></div>
+          
+          <button 
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="p-1.5 text-graphite-400 hover:text-white hover:bg-graphite-800 rounded-md transition-colors"
+            title="Toggle Fullscreen"
           >
-            Original
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("heatmap")}
-            className={`px-2.5 py-1 rounded-md transition-colors ${
-              viewMode === "heatmap" ? "bg-amber-600 text-white font-medium" : "text-slate-400 hover:text-slate-200"
-            }`}
-            title="ResNet18 Class Activation Heatmap"
-          >
-            Heatmap
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("overlay")}
-            className={`px-2.5 py-1 rounded-md transition-colors ${
-              viewMode === "overlay" ? "bg-blue-600 text-white font-medium" : "text-slate-400 hover:text-slate-200"
-            }`}
-            title="50/50 Blended Grad-CAM Overlay"
-          >
-            Overlay (CAM)
+            <Maximize className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Main Image Display */}
-      <div className="relative aspect-square max-h-[460px] bg-black flex items-center justify-center overflow-hidden select-none">
+      {/* Main Image Viewport */}
+      <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden min-h-[400px]">
+        {/* Subtle background grid for empty/loading states */}
+        <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none"></div>
+
         {isLoading ? (
-          <div className="flex flex-col items-center gap-3">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500" />
-            <span className="text-xs text-slate-400">Loading DICOM / MRI Slice...</span>
+          <div className="flex flex-col items-center gap-4 relative z-10">
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 rounded-full border-2 border-graphite-800"></div>
+              <div className="absolute inset-0 rounded-full border-t-2 border-clinical-500 animate-spin"></div>
+            </div>
+            <span className="text-xs font-mono text-clinical-400 tracking-widest uppercase">Loading Volume Data</span>
           </div>
         ) : activeImageUrl && !imageLoadError ? (
-          <>
+          <div className="relative w-full h-full flex items-center justify-center p-4">
             <img
               src={activeImageUrl}
-              alt={`MRI Slice ${sliceIndex + 1} - ${viewMode}`}
-              onLoad={() => {
-                console.log("DICOM PREVIEW LOADED");
-              }}
-              onError={(event) => {
-                console.error("DICOM PREVIEW FAILED", event);
-                setImageLoadError(true);
-              }}
-              className="w-full h-full object-contain transition-all duration-150"
+              alt={`MRI Slice ${sliceIndex + 1}`}
+              onError={() => setImageLoadError(true)}
+              className="max-w-full max-h-full object-contain transition-opacity duration-300 select-none drop-shadow-[0_0_15px_rgba(0,0,0,0.8)]"
               style={{
                 filter: `brightness(${brightness}%) contrast(${contrast}%)`,
               }}
+              draggable={false}
             />
 
-            {/* Warning if user chose CAM view but CAM is not yet generated */}
+            {/* Warning overlay if CAM requested but unavailable */}
             {(viewMode === "heatmap" || viewMode === "overlay") && !hasCam && (
-              <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-amber-950/80 border border-amber-600/60 text-amber-200 text-[11px] px-3 py-1.5 rounded-lg backdrop-blur-md text-center max-w-[90%] shadow-lg">
-                <span className="font-semibold">Grad-CAM Unavailable</span> — Displaying Original DICOM slice. Run screening inference to generate activation heatmaps.
+              <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-graphite-950/80 border border-amber-500/30 px-4 py-2 rounded-lg backdrop-blur-md text-center max-w-[90%] shadow-2xl flex items-center gap-3">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                <span className="text-xs text-graphite-200">
+                  <span className="text-amber-400 font-semibold mr-1">Explainability Unavailable.</span>
+                  Showing original slice. Run inference to generate maps.
+                </span>
               </div>
             )}
-          </>
+          </div>
         ) : (
-          <div className="flex flex-col items-center gap-2 p-6 text-center text-slate-400">
+          <div className="flex flex-col items-center gap-3 p-6 text-center z-10">
             {imageLoadError ? (
               <>
-                <div className="w-10 h-10 rounded-full bg-red-900/40 border border-red-500/50 flex items-center justify-center text-red-400 mb-1">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
+                <div className="w-12 h-12 rounded-xl bg-red-950/50 border border-red-900 flex items-center justify-center text-red-500 mb-2">
+                  <XCircle className="w-6 h-6" />
                 </div>
-                <p className="text-sm font-semibold text-slate-200">Unable to load DICOM preview</p>
-                <p className="text-xs text-slate-400 max-w-xs">
-                  The slice image could not be fetched or rendered. Check network connectivity or re-upload the series.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setImageLoadError(false)}
-                  className="mt-2 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded border border-slate-700 transition-colors"
-                >
-                  Retry Loading
-                </button>
+                <p className="text-sm font-semibold text-white">Preview Unavailable</p>
+                <p className="text-xs text-graphite-400 max-w-xs">Data stream interrupted. Please re-upload or check connection.</p>
               </>
             ) : (
               <>
-                <svg className="w-12 h-12 stroke-current opacity-30" viewBox="0 0 24 24" fill="none">
-                  <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="1.5" />
-                  <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
-                  <path d="M21 15l-5-5L5 21" strokeWidth="1.5" />
-                </svg>
-                <p className="text-sm font-medium">No MRI image slice loaded</p>
-                <p className="text-xs text-slate-600">Upload a study or select a valid slice index.</p>
+                <div className="w-16 h-16 rounded-full border border-graphite-800 flex items-center justify-center mb-2 bg-graphite-950">
+                  <ImageIcon className="w-6 h-6 text-graphite-600" />
+                </div>
+                <p className="text-sm font-medium text-graphite-300">No Volumetric Data</p>
               </>
             )}
           </div>
         )}
 
-        {/* Viewport HUD Overlays */}
-        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded text-[11px] font-mono text-slate-300 pointer-events-none">
-          Plane: {activePlane.toUpperCase()} | Mode: {viewMode.toUpperCase()}
+        {/* HUD Elements */}
+        <div className="absolute top-4 left-4 flex flex-col gap-1 pointer-events-none">
+          <div className="bg-black/60 backdrop-blur-md px-2 py-1 rounded text-[10px] font-mono text-graphite-300 border border-white/5">
+            PLN: <span className="text-white">{activePlane.toUpperCase()}</span>
+          </div>
+          <div className="bg-black/60 backdrop-blur-md px-2 py-1 rounded text-[10px] font-mono text-graphite-300 border border-white/5">
+            MOD: <span className="text-white">{viewMode.toUpperCase()}</span>
+          </div>
         </div>
-        <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded text-[11px] font-mono text-slate-300 pointer-events-none">
-          Slice: {sliceIndex + 1}/{effectiveTotal} {effectiveTotal > 1 ? "(Use ← / → keys)" : "(Single 2D Slice)"}
+        
+        <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md px-2 py-1 rounded text-[10px] font-mono text-graphite-300 border border-white/5 pointer-events-none">
+          IDX: <span className="text-white">{sliceIndex + 1}</span> / {effectiveTotal}
+        </div>
+        
+        <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-2 py-1 rounded text-[10px] font-mono text-graphite-300 border border-white/5 pointer-events-none">
+          W/L: <span className="text-white">{brightness}% / {contrast}%</span>
         </div>
       </div>
 
-      {/* Slice Navigation & Window Controls */}
-      <div className="bg-slate-950 p-4 border-t border-slate-800 space-y-3">
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => handleSliceChange(sliceIndex - 1)}
-            disabled={sliceIndex <= 0 || effectiveTotal <= 1}
-            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg text-xs font-semibold transition-colors"
-          >
-            &#9664; Prev
-          </button>
-
-          <div className="flex-1 flex items-center gap-3">
+      {/* Footer Controls */}
+      <div className="bg-graphite-900 px-6 py-4 border-t border-graphite-800">
+        <div className="flex flex-col sm:flex-row items-center gap-6">
+          
+          {/* Slice Scrubber */}
+          <div className="flex-1 w-full flex items-center gap-4">
+            <span className="text-[10px] font-mono text-graphite-400 w-8">Slice</span>
             <input
               type="range"
               min={0}
@@ -292,58 +272,55 @@ export function MriViewer({
               value={sliceIndex}
               disabled={effectiveTotal <= 1}
               onChange={(e) => handleSliceChange(parseInt(e.target.value, 10))}
-              className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-blue-500 ${
-                effectiveTotal <= 1 ? "bg-slate-800 opacity-40 cursor-not-allowed" : "bg-slate-800"
+              className={`flex-1 h-1.5 rounded-full appearance-none cursor-pointer outline-none transition-all ${
+                effectiveTotal <= 1 ? "bg-graphite-800 opacity-50" : "bg-graphite-700 hover:bg-graphite-600"
               }`}
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => handleSliceChange(sliceIndex + 1)}
-            disabled={sliceIndex >= effectiveTotal - 1 || effectiveTotal <= 1}
-            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg text-xs font-semibold transition-colors"
-          >
-            Next &#9654;
-          </button>
-        </div>
-
-        {/* Quick Window Level Adjustments */}
-        <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-900">
-          <div className="flex items-center gap-3">
-            <span>Brightness: {brightness}%</span>
-            <input
-              type="range"
-              min={50}
-              max={150}
-              value={brightness}
-              onChange={(e) => setBrightness(parseInt(e.target.value, 10))}
-              className="w-20 h-1 bg-slate-800 rounded appearance-none cursor-pointer accent-blue-400"
-            />
-          </div>
-          <div className="flex items-center gap-3">
-            <span>Contrast: {contrast}%</span>
-            <input
-              type="range"
-              min={50}
-              max={150}
-              value={contrast}
-              onChange={(e) => setContrast(parseInt(e.target.value, 10))}
-              className="w-20 h-1 bg-slate-800 rounded appearance-none cursor-pointer accent-blue-400"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setBrightness(100);
-                setContrast(100);
+              style={{
+                background: effectiveTotal > 1 
+                  ? `linear-gradient(to right, var(--color-clinical-500) ${(sliceIndex / Math.max(1, effectiveTotal - 1)) * 100}%, var(--color-graphite-700) ${(sliceIndex / Math.max(1, effectiveTotal - 1)) * 100}%)`
+                  : undefined
               }}
-              className="text-[10px] text-slate-500 hover:text-slate-300 underline ml-1"
+            />
+          </div>
+
+          {/* Windowing Tools */}
+          <div className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-4">
+            <div className="flex items-center gap-2 group relative">
+              <SlidersHorizontal className="w-4 h-4 text-graphite-400" />
+              <input
+                type="range"
+                min={50} max={150}
+                value={brightness}
+                onChange={(e) => setBrightness(parseInt(e.target.value, 10))}
+                className="w-20 h-1 bg-graphite-800 rounded appearance-none cursor-pointer"
+                title="Brightness"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-gradient-to-br from-white to-black border border-graphite-700"></div>
+              <input
+                type="range"
+                min={50} max={150}
+                value={contrast}
+                onChange={(e) => setContrast(parseInt(e.target.value, 10))}
+                className="w-20 h-1 bg-graphite-800 rounded appearance-none cursor-pointer"
+                title="Contrast"
+              />
+            </div>
+            
+            <button
+              onClick={() => { setBrightness(100); setContrast(100); }}
+              className="p-1.5 text-graphite-400 hover:text-white rounded-md hover:bg-graphite-800 transition-colors"
+              title="Reset View"
             >
-              Reset
+              <RotateCcw className="w-4 h-4" />
             </button>
           </div>
+
         </div>
       </div>
+
     </div>
   );
 }

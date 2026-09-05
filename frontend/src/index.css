@@ -1,74 +1,162 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 
 @theme {
-  --color-primary-50: #f0f4ff;
-  --color-primary-100: #e0e9ff;
-  --color-primary-500: #3b5bfe;
-  --color-primary-600: #2438f5;
-  --color-primary-700: #1c27e1;
-  --color-surface-50: #f8fafc;
-  --color-surface-100: #f1f5f9;
-  --color-surface-200: #e2e8f0;
-  --color-surface-700: #334155;
-  --color-surface-800: #1e293b;
-  --color-surface-900: #0f172a;
-  --color-surface-950: #020617;
+  /* Medical Dark Graphite / Near Black */
+  --color-graphite-50: #f1f5f9;
+  --color-graphite-100: #e2e8f0;
+  --color-graphite-200: #cbd5e1;
+  --color-graphite-300: #94a3b8;
+  --color-graphite-400: #64748b;
+  --color-graphite-500: #475569;
+  --color-graphite-600: #334155;
+  --color-graphite-700: #1e293b;
+  --color-graphite-800: #0f172a;
+  --color-graphite-900: #070b14; /* Super dark */
+  --color-graphite-950: #04060a;
+
+  /* Clinical Blue/Green (Teal) */
+  --color-clinical-50: #f0fdfa;
+  --color-clinical-100: #ccfbf1;
+  --color-clinical-200: #99f6e4;
+  --color-clinical-300: #5eead4;
+  --color-clinical-400: #2dd4bf;
+  --color-clinical-500: #14b8a6;
+  --color-clinical-600: #0d9488;
+  --color-clinical-700: #0f766e;
+  --color-clinical-800: #115e59;
+  --color-clinical-900: #134e4a;
+  --color-clinical-950: #042f2e;
+
+  /* Deep Clinical Blue */
+  --color-deepblue-50: #eff6ff;
+  --color-deepblue-100: #dbeafe;
+  --color-deepblue-200: #bfdbfe;
+  --color-deepblue-300: #93c5fd;
+  --color-deepblue-400: #60a5fa;
+  --color-deepblue-500: #3b82f6;
+  --color-deepblue-600: #2563eb;
+  --color-deepblue-700: #1d4ed8;
+  --color-deepblue-800: #1e40af;
+  --color-deepblue-900: #1e3a8a;
+  --color-deepblue-950: #172554;
+
+  /* Quantum purple accent */
+  --color-quantum-500: #8b5cf6;
+  --color-quantum-900: #4c1d95;
+
+  /* Semantic */
+  --color-bg-base: var(--color-graphite-950);
+  --color-bg-panel: var(--color-graphite-900);
+  --color-bg-card: var(--color-graphite-800);
+  
+  --color-border-subtle: var(--color-graphite-800);
+  --color-border-strong: var(--color-graphite-700);
+
+  --color-text-primary: var(--color-graphite-50);
+  --color-text-secondary: var(--color-graphite-300);
+  --color-text-muted: var(--color-graphite-400);
+
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-[var(--color-bg-base)] text-[var(--color-text-primary)] font-sans antialiased;
+  }
 }
 
 @layer components {
+  /* Premium Card Design */
   .card {
-    background-color: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.75rem;
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    @apply bg-[var(--color-bg-panel)] border border-[var(--color-border-strong)] rounded-xl shadow-lg backdrop-blur-sm;
   }
+
+  .card-hover {
+    @apply hover:border-graphite-600 hover:shadow-xl transition-all duration-300;
+  }
+
+  /* Buttons */
   .btn-primary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #2438f5;
-    color: white;
-    font-weight: 500;
-    font-size: 0.875rem;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    transition: background-color 0.15s;
-    cursor: pointer;
-    border: none;
-    text-decoration: none;
+    @apply inline-flex items-center justify-center bg-clinical-600 text-white font-medium text-sm px-4 py-2 rounded-lg transition-all duration-200 shadow-md shadow-clinical-900/50 hover:bg-clinical-500 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed border border-clinical-500/50;
   }
-  .btn-primary:hover { background-color: #1c27e1; }
-  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
   .btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #f1f5f9;
-    color: #334155;
-    font-weight: 500;
-    font-size: 0.875rem;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    transition: background-color 0.15s;
-    cursor: pointer;
-    border: none;
-    text-decoration: none;
+    @apply inline-flex items-center justify-center bg-graphite-800 text-graphite-100 font-medium text-sm px-4 py-2 rounded-lg transition-all duration-200 border border-graphite-700 hover:bg-graphite-700 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed;
   }
-  .btn-secondary:hover { background-color: #e2e8f0; }
-  .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center bg-transparent text-graphite-200 font-medium text-sm px-4 py-2 rounded-lg transition-all duration-200 border border-graphite-600 hover:border-graphite-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center bg-transparent text-graphite-300 font-medium text-sm px-4 py-2 rounded-lg transition-all duration-200 hover:bg-graphite-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Inputs */
   .input {
-    width: 100%;
-    padding: 0.5rem 0.75rem;
-    background-color: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
-    outline: none;
-    transition: box-shadow 0.15s;
-    color: #0f172a;
+    @apply w-full px-3 py-2 bg-graphite-900 border border-graphite-700 rounded-lg text-sm text-graphite-100 outline-none transition-all duration-200 placeholder-graphite-500 focus:border-clinical-500 focus:ring-1 focus:ring-clinical-500;
   }
-  .input:focus {
-    border-color: #3b5bfe;
-    box-shadow: 0 0 0 2px rgba(59, 91, 254, 0.2);
+
+  /* Status Badges */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border;
   }
+  .badge-success {
+    @apply bg-emerald-950/50 text-emerald-400 border-emerald-800/50;
+  }
+  .badge-error {
+    @apply bg-red-950/50 text-red-400 border-red-800/50;
+  }
+  .badge-warning {
+    @apply bg-amber-950/50 text-amber-400 border-amber-800/50;
+  }
+  .badge-info {
+    @apply bg-deepblue-950/50 text-deepblue-400 border-deepblue-800/50;
+  }
+  .badge-neutral {
+    @apply bg-graphite-800 text-graphite-300 border-graphite-700;
+  }
+
+  /* Grid Texture for Backgrounds */
+  .bg-grid-pattern {
+    background-image: 
+      linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Glassmorphism */
+  .glass {
+    @apply bg-graphite-900/60 backdrop-blur-md border border-graphite-700/50;
+  }
+
+  /* Subtle Medical Grid Animation */
+  .scan-line {
+    @apply absolute inset-0 pointer-events-none opacity-20;
+    background: linear-gradient(to bottom, transparent 0%, rgba(45, 212, 191, 0.5) 50%, transparent 100%);
+    height: 4px;
+    animation: scan 3s infinite linear;
+  }
+}
+
+@keyframes scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(1000px); } /* arbitrary large distance */
+}
+
+/* Custom Scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-graphite-950);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-graphite-700);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-graphite-500);
 }

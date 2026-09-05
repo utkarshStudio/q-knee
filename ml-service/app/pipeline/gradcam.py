@@ -180,6 +180,19 @@ def compute_gradcam_for_volume(
             if img is not None:
                 slices.append(img)
 
+    return compute_gradcam_for_slices(slices, output_dir, slice_idx, label_idx, max_slices)
+
+def compute_gradcam_for_slices(
+    slices: List[Image.Image],
+    output_dir: Optional[Union[str, Path]] = None,
+    slice_idx: Optional[int] = None,
+    label_idx: int = 1,
+    max_slices: int = 16,
+) -> Dict[str, Any]:
+    """
+    Compute Grad-CAM across pre-loaded MRI study slices.
+    """
+
     # 4. Fallback if no images could be read
     if not slices:
         raise ValueError("No valid MRI slices could be extracted from provided file paths.")

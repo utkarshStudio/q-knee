@@ -148,10 +148,10 @@ def sort_dicom_paths(file_paths: List[Union[str, Path]]) -> List[str]:
     return [x[0] for x in parsed]
 
 
-def load_npy_volume(path: Union[str, Path]) -> List[Image.Image]:
+def load_npy_volume(path: Union[str, Path], plane: str = "axial") -> List[Image.Image]:
     """
     Load a NumPy array (.npy or .npz) containing 2D or 3D MRI volume data.
-    Supports shapes (D, H, W), (H, W, D), or (H, W).
+    Supports shapes (D, H, W). Slices along the requested plane.
     Returns list of slice PIL Images.
     """
     path_str = str(path)
@@ -180,28 +180,11 @@ def load_npy_volume(path: Union[str, Path]) -> List[Image.Image]:
             u8 = (arr * 255.0).astype(np.uint8)
             slices.append(Image.fromarray(u8).convert("RGB"))
         elif arr.ndim == 3:
-            # Determine depth axis (usually smallest or first dimension)
-            if arr.shape[0] < arr.shape[1] and arr.shape[0] < arr.shape[2]:
-                # (D, H, W)
-                num_slices = arr.shape[0]
-                for i in range(num_slices):
-                    u8 = (arr[i] * 255.0).astype(np.uint8)
-                    slices.append(Image.fromarray(u8).convert("RGB"))
-            elif arr.shape[2] < arr.shape[0] and arr.shape[2] < arr.shape[1]:
-                # (H, W, D)
-                num_slices = arr.shape[2]
-                for i in range(num_slices):
-                    u8 = (arr[:, :, i] * 255.0).astype(np.uint8)
-                    slices.append(Image.fromarray(u8).convert("RGB"))
-            else:
-                # Default to slice along axis 0
-                for i in range(arr.shape[0]):
-                    u8 = (arr[i] * 255.0).astype(np.uint8)
-                    slices.append(Image.fromarray(u8).convert("RGB"))
+            return load_npy_volume_from_array(arr, plane)
         elif arr.ndim == 4:
             # (D, H, W, C) or (1, D, H, W)
             arr = arr.squeeze()
-            return load_npy_volume_from_array(arr)
+            return load_npy_volume_from_array(arr, plane)
 
         return slices
     except Exception as e:
@@ -209,8 +192,8 @@ def load_npy_volume(path: Union[str, Path]) -> List[Image.Image]:
         return []
 
 
-def load_npy_volume_from_array(arr: np.ndarray) -> List[Image.Image]:
-    """Helper to slice normalized 3D array into PIL Images."""
+def load_npy_volume_from_array(arr: np.ndarray, plane: str = "axial") -> List[Image.Image]:
+    """Helper to slice normalized 3D array into PIL Images along requested plane."""
     arr = arr.astype(np.float32)
     min_v = np.min(arr)
     max_v = np.max(arr)
@@ -218,6 +201,21 @@ def load_npy_volume_from_array(arr: np.ndarray) -> List[Image.Image]:
         arr = (arr - min_v) / (max_v - min_v)
     else:
         arr = np.zeros_like(arr)
+
+    # Convert arbitrary 3D shapes to strictly (D, H, W) if depth is last
+    if arr.ndim == 3 and arr.shape[2] < arr.shape[0] and arr.shape[2] < arr.shape[1]:
+        arr = np.transpose(arr, (2, 0, 1))
+
+    # Transpose according to requested plane assuming (D, H, W)
+    if arr.ndim >= 3:
+        p = plane.lower()
+        if p == "coronal":
+            # (H, D, W) -> Extract along H
+            arr = np.transpose(arr, (1, 0, 2))
+        elif p == "sagittal":
+            # (W, H, D) -> Extract along W
+            arr = np.transpose(arr, (2, 1, 0))
+        # axial is default (D, H, W) -> Extract along D
 
     slices = []
     if arr.ndim == 2:

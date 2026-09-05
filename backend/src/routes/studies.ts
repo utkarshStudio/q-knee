@@ -2,14 +2,34 @@ import { Router, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 import { pool } from '../db/pool';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate, optionalAuthenticate, AuthRequest } from '../middleware/auth';
 import { SAMPLE_DICOM_B64 } from '../db/sample_dicom_b64';
 import { decodeDicomToPng, encodeGrayscalePng } from '../services/dicomDecoder';
 
 const router = Router();
+
+function getStudyOwnershipCondition(req: AuthRequest, studyAlias = 'studies', paramStartIndex = 1): { sql: string; params: any[] } {
+  if (req.user?.id) {
+    if (req.guestSessionId) {
+      return {
+        sql: `(${studyAlias}.user_id = $${paramStartIndex} OR (${studyAlias}.user_id IS NULL AND ${studyAlias}.guest_session_id = $${paramStartIndex + 1}))`,
+        params: [req.user.id, req.guestSessionId]
+      };
+    }
+    return {
+      sql: `${studyAlias}.user_id = $${paramStartIndex}`,
+      params: [req.user.id]
+    };
+  }
+  return {
+    sql: `(${studyAlias}.user_id IS NULL AND ${studyAlias}.guest_session_id = $${paramStartIndex})`,
+    params: [req.guestSessionId || '']
+  };
+}
 
 // Set up multer storage OUTSIDE git-tracked source
 const uploadDir = path.resolve(process.env.UPLOAD_DIR || './storage/uploads');
@@ -37,15 +57,16 @@ const upload = multer({
   },
 });
 
-// List studies for authenticated user
-router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
+// List studies (for authenticated user or guest session)
+router.get('/', optionalAuthenticate, async (req: AuthRequest, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 20;
   const search = (req.query.search as string) || '';
   const offset = (page - 1) * limit;
   try {
-    let query = 'SELECT s.* FROM studies s WHERE s.user_id = $1';
-    const params: any[] = [req.user!.id];
+    const ownership = getStudyOwnershipCondition(req, 's', 1);
+    let query = `SELECT s.* FROM studies s WHERE ${ownership.sql}`;
+    const params: any[] = [...ownership.params];
     if (search) {
       params.push(`%${search}%`);
       query += ` AND (s.original_filename ILIKE $${params.length} OR s.study_instance_uid ILIKE $${params.length})`;
@@ -63,12 +84,10 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
 });
 
 // Get study by ID with accurate slice count & metadata
-router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
+router.get('/:id', optionalAuthenticate, async (req: AuthRequest, res: Response) => {
   try {
-    let result = await pool.query('SELECT * FROM studies WHERE id = $1 AND user_id = $2', [req.params.id, req.user!.id]);
-    if (result.rows.length === 0) {
-      result = await pool.query('SELECT * FROM studies WHERE id = $1', [req.params.id]);
-    }
+    const ownership = getStudyOwnershipCondition(req, 'studies', 2);
+    let result = await pool.query(`SELECT * FROM studies WHERE id = $1 AND ${ownership.sql}`, [req.params.id, ...ownership.params]);
     if (result.rows.length === 0) { res.status(404).json({ error: 'Study not found' }); return; }
     const study = result.rows[0];
     const meta = typeof study.metadata === 'string' ? JSON.parse(study.metadata || '{}') : (study.metadata || {});
@@ -92,65 +111,40 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
-const seed5cfTarget = path.resolve(uploadDir, 'study_5cf7d0b0.dcm');
-if (!fs.existsSync(seed5cfTarget)) {
-  try {
-    fs.writeFileSync(seed5cfTarget, Buffer.from(SAMPLE_DICOM_B64, 'base64'));
-    console.log('[Seed] Prepared study_5cf7d0b0.dcm in storage directory');
-  } catch (err: any) {
-    console.warn('[Seed] Warning:', err.message);
-  }
-}
 
 // Stream DICOM / NPY / Image slice preview as PNG
-router.get('/:id/slice/:sliceIdx', authenticate, async (req: AuthRequest, res: Response) => {
+router.get('/:id/slice/:sliceIdx', optionalAuthenticate, async (req: AuthRequest, res: Response) => {
   try {
-    let studyResult = await pool.query('SELECT * FROM studies WHERE id = $1 AND user_id = $2', [req.params.id, req.user!.id]);
+    const ownership = getStudyOwnershipCondition(req, 'studies', 2);
+    let studyResult = await pool.query(`SELECT * FROM studies WHERE id = $1 AND ${ownership.sql}`, [req.params.id, ...ownership.params]);
     if (studyResult.rows.length === 0) {
-      studyResult = await pool.query('SELECT * FROM studies WHERE id = $1', [req.params.id]);
-    }
-    if (studyResult.rows.length === 0) {
-      if (req.params.id === 'study_5cf7d0b0') {
-        studyResult = {
-          rows: [{
-            id: 'study_5cf7d0b0',
-            user_id: req.user!.id,
-            study_instance_uid: '1.2.826.0.1.3680043.8.498.study_5cf7d0b0',
-            original_filename: 'knee_mri_sagittal_study_5cf7d0b0.dcm',
-            storage_reference: JSON.stringify([seed5cfTarget]),
-            status: 'ready',
-            mode: 'REAL',
-            metadata: { slice_count: 1, has_3d_volume: false, resolution: '128x128' },
-          }],
-        } as any;
-      } else {
-        console.warn(`[Diagnostic] Slice preview 404: Study ${req.params.id} not found`);
-        res.status(404).json({ error: 'Study not found' });
-        return;
-      }
+      console.warn(`[Diagnostic] Slice preview 404: Study ${req.params.id} not found`);
+      res.status(404).json({ error: 'Study not found' });
+      return;
     }
     const study = studyResult.rows[0];
     const sliceIdx = Math.max(0, parseInt(req.params.sliceIdx || '0', 10));
+    const plane = (typeof req.query.plane === 'string' ? req.query.plane : 'axial').toLowerCase();
 
     const meta = typeof study.metadata === 'string' ? JSON.parse(study.metadata || '{}') : (study.metadata || {});
 
     // 1. Check if slice PNG already exists on disk
-    const diskPngPath = path.resolve(uploadDir, `${study.id}_slice_${sliceIdx}.png`);
+    const diskPngPath = path.resolve(uploadDir, `${study.id}_slice_${sliceIdx}_${plane}.png`);
     if (fs.existsSync(diskPngPath)) {
-      console.log(`[Diagnostic] Serving cached PNG for study=${study.id}, slice=${sliceIdx}`);
+      console.log(`[Diagnostic] Serving cached PNG for study=${study.id}, slice=${sliceIdx}, plane=${plane}`);
       res.set('Content-Type', 'image/png');
       res.set('Cache-Control', 'public, max-age=86400');
       res.sendFile(diskPngPath);
       return;
     }
 
-    // 2. Check if metadata has cached base64 preview
-    const cachedB64 = (sliceIdx === 0 && meta.preview_b64) ? meta.preview_b64 : meta.slice_previews?.[sliceIdx];
+    // 2. Check if metadata has cached base64 preview (axial only for now)
+    const cachedB64 = (sliceIdx === 0 && plane === 'axial' && meta.preview_b64) ? meta.preview_b64 : (plane === 'axial' ? meta.slice_previews?.[sliceIdx] : null);
     if (cachedB64) {
       const cleanB64 = cachedB64.includes(',') ? cachedB64.split(',')[1] : cachedB64;
       const pngBuf = Buffer.from(cleanB64, 'base64');
       try { fs.writeFileSync(diskPngPath, pngBuf); } catch {}
-      console.log(`[Diagnostic] Serving metadata preview_b64 for study=${study.id}, slice=${sliceIdx}`);
+      console.log(`[Diagnostic] Serving metadata preview_b64 for study=${study.id}, slice=${sliceIdx}, plane=${plane}`);
       res.set('Content-Type', 'image/png');
       res.set('Cache-Control', 'public, max-age=86400');
       res.send(pngBuf);
@@ -173,26 +167,22 @@ router.get('/:id/slice/:sliceIdx', authenticate, async (req: AuthRequest, res: R
 
     // 4. Locate uploaded file on disk and send actual bytes via multipart/form-data
     let targetFilePath = filePaths[sliceIdx] || filePaths[0];
-    if ((!targetFilePath || !fs.existsSync(targetFilePath)) && study.id === 'study_5cf7d0b0') {
-      targetFilePath = seed5cfTarget;
-      if (!fs.existsSync(targetFilePath)) {
-        try { fs.writeFileSync(targetFilePath, Buffer.from(SAMPLE_DICOM_B64, 'base64')); } catch {}
-      }
-    }
 
     if (targetFilePath && fs.existsSync(targetFilePath)) {
       try {
         const fileBuf = fs.readFileSync(targetFilePath);
 
         // 4a. Direct pure-Node DICOM decoding on Backend (fast, zero cross-service dependency)
-        const localPng = decodeDicomToPng(fileBuf);
-        if (localPng) {
-          try { fs.writeFileSync(diskPngPath, localPng); } catch {}
-          console.log(`[Diagnostic] Successfully decoded DICOM to PNG directly on Backend for study=${study.id}, slice=${sliceIdx}`);
-          res.set('Content-Type', 'image/png');
-          res.set('Cache-Control', 'public, max-age=86400');
-          res.send(localPng);
-          return;
+        if (targetFilePath.toLowerCase().endsWith('.dcm') && plane === 'axial') {
+          const localPng = decodeDicomToPng(fileBuf);
+          if (localPng) {
+            try { fs.writeFileSync(diskPngPath, localPng); } catch {}
+            console.log(`[Diagnostic] Successfully decoded DICOM to PNG directly on Backend for study=${study.id}, slice=${sliceIdx}, plane=${plane}`);
+            res.set('Content-Type', 'image/png');
+            res.set('Cache-Control', 'public, max-age=86400');
+            res.send(localPng);
+            return;
+          }
         }
 
         // 4b. Stream multipart/form-data with actual file bytes to ML service
@@ -203,6 +193,7 @@ router.get('/:id/slice/:sliceIdx', authenticate, async (req: AuthRequest, res: R
         formData.append('file', blob, path.basename(targetFilePath));
         formData.append('slice_idx', String(sliceIdx));
         formData.append('study_id', study.id);
+        formData.append('plane', plane);
 
         const mlRes = await axios.post(`${mlUrl}/preview/slice`, formData, {
           responseType: 'arraybuffer',
@@ -211,7 +202,7 @@ router.get('/:id/slice/:sliceIdx', authenticate, async (req: AuthRequest, res: R
 
         const pngData = Buffer.from(mlRes.data);
         try { fs.writeFileSync(diskPngPath, pngData); } catch {}
-        console.log(`[Diagnostic] Successfully received and cached PNG from ML multipart for study=${study.id}, slice=${sliceIdx}`);
+        console.log(`[Diagnostic] Successfully received and cached PNG from ML multipart for study=${study.id}, slice=${sliceIdx}, plane=${plane}`);
         res.set('Content-Type', 'image/png');
         res.set('Cache-Control', 'public, max-age=86400');
         res.send(pngData);
@@ -221,54 +212,25 @@ router.get('/:id/slice/:sliceIdx', authenticate, async (req: AuthRequest, res: R
       }
     }
 
-    // 5. Fallback: try calling /preview/slice with study_id, sample endpoint, or backend synthesis
+    // 5. Fallback: try calling /preview/slice with study_id
     try {
       const mlRes = await axios.post(`${mlUrl}/preview/slice`, {
         study_id: study.id,
         slice_idx: sliceIdx,
+        plane: plane,
       }, { responseType: 'arraybuffer', timeout: 15000 });
 
       const pngData = Buffer.from(mlRes.data);
       try { fs.writeFileSync(diskPngPath, pngData); } catch {}
-      console.log(`[Diagnostic] Successfully generated PNG via ML fallback for study=${study.id}, slice=${sliceIdx}`);
+      console.log(`[Diagnostic] Successfully generated PNG via ML fallback for study=${study.id}, slice=${sliceIdx}, plane=${plane}`);
       res.set('Content-Type', 'image/png');
       res.set('Cache-Control', 'public, max-age=86400');
       res.send(pngData);
       return;
     } catch (mlErr: any) {
-      try {
-        const sampleRes = await axios.get(`${mlUrl}/preview/sample/${study.id}/${sliceIdx}`, {
-          responseType: 'arraybuffer',
-          timeout: 10000,
-        });
-        const pngData = Buffer.from(sampleRes.data);
-        try { fs.writeFileSync(diskPngPath, pngData); } catch {}
-        res.set('Content-Type', 'image/png');
-        res.set('Cache-Control', 'public, max-age=86400');
-        res.send(pngData);
-        return;
-      } catch {
-        // Safe backend fallback: generate high-fidelity 128x128 grayscale MRI slice
-        console.log(`[Diagnostic] Generating backend synthesis slice PNG for study=${study.id}, slice=${sliceIdx}`);
-        const fallbackPixels = Buffer.alloc(128 * 128);
-        const seed = (String(study.id).charCodeAt(0) * 31 + sliceIdx * 17) % 256;
-        for (let y = 0; y < 128; y++) {
-          for (let x = 0; x < 128; x++) {
-            const distFromCenter = Math.sqrt((x - 64) ** 2 + (y - 64) ** 2);
-            if (distFromCenter < 50) {
-              fallbackPixels[y * 128 + x] = Math.max(0, Math.min(255, Math.floor(200 - distFromCenter * 2 + (seed % 20))));
-            } else {
-              fallbackPixels[y * 128 + x] = Math.max(0, Math.floor(20 - distFromCenter * 0.1));
-            }
-          }
-        }
-        const fallbackPng = encodeGrayscalePng(fallbackPixels, 128, 128);
-        try { fs.writeFileSync(diskPngPath, fallbackPng); } catch {}
-        res.set('Content-Type', 'image/png');
-        res.set('Cache-Control', 'public, max-age=86400');
-        res.send(fallbackPng);
-        return;
-      }
+      console.warn(`[Diagnostic] Slice preview ML error:`, mlErr.message);
+      res.status(422).json({ error: 'Unable to process uploaded MRI volume slice' });
+      return;
     }
   } catch (err: any) {
     console.error(`[Diagnostic] Slice preview internal error:`, err);
@@ -277,9 +239,10 @@ router.get('/:id/slice/:sliceIdx', authenticate, async (req: AuthRequest, res: R
 });
 
 // Get predictions for a study
-router.get('/:id/predictions', authenticate, async (req: AuthRequest, res: Response) => {
+router.get('/:id/predictions', optionalAuthenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const study = await pool.query('SELECT id FROM studies WHERE id = $1 AND user_id = $2', [req.params.id, req.user!.id]);
+    const ownership = getStudyOwnershipCondition(req, 'studies', 2);
+    const study = await pool.query(`SELECT id FROM studies WHERE id = $1 AND ${ownership.sql}`, [req.params.id, ...ownership.params]);
     if (study.rows.length === 0) { res.status(404).json({ error: 'Study not found' }); return; }
     const result = await pool.query('SELECT * FROM predictions WHERE study_id = $1 ORDER BY created_at DESC', [req.params.id]);
     res.json(result.rows);
@@ -288,12 +251,14 @@ router.get('/:id/predictions', authenticate, async (req: AuthRequest, res: Respo
   }
 });
 
-// Upload study
-router.post('/upload', authenticate, upload.array('files'), async (req: AuthRequest, res: Response) => {
+// Upload study (supports authenticated users and guest sessions)
+router.post('/upload', optionalAuthenticate, upload.array('files'), async (req: AuthRequest, res: Response) => {
   const files = req.files as Express.Multer.File[];
   if (!files || files.length === 0) { res.status(400).json({ error: 'No files uploaded' }); return; }
   try {
     const studyId = uuidv4();
+    const userId = req.user?.id || null;
+    const guestSessionId = !userId ? (req.guestSessionId || uuidv4()) : null;
     const filePaths = files.map(f => f.path);
     const metadata: Record<string, any> = {
       file_count: files.length,
@@ -349,14 +314,26 @@ router.post('/upload', authenticate, upload.array('files'), async (req: AuthRequ
 
     // Create study in DB with 'ready' or 'processing' status
     const result = await pool.query(
-      `INSERT INTO studies (user_id, study_instance_uid, original_filename, storage_reference, status, mode, metadata)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [req.user!.id, studyId, files[0].originalname, JSON.stringify(filePaths), 'ready', mode, JSON.stringify(metadata)]
+      `INSERT INTO studies (user_id, guest_session_id, study_instance_uid, original_filename, storage_reference, status, mode, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [userId, guestSessionId, studyId, files[0].originalname, JSON.stringify(filePaths), 'ready', mode, JSON.stringify(metadata)]
     );
     const study = result.rows[0];
 
     // Asynchronously notify ML service for deep volume parsing & metrics if needed
-    axios.post(`${mlUrl}/process`, { study_id: study.id, file_paths: filePaths, mode }, { timeout: 30000 })
+    const formProcess = new FormData();
+    formProcess.append('study_id', study.id);
+    formProcess.append('mode', mode);
+    for (const p of filePaths) {
+      if (fs.existsSync(p)) {
+        const fileBytes = fs.readFileSync(p);
+        const hash = crypto.createHash('sha256').update(fileBytes).digest('hex');
+        console.log(`BACKEND RECEIVED HASH (process, ${path.basename(p)}): ${hash}`);
+        formProcess.append('files', new Blob([fileBytes], { type: 'application/octet-stream' }), path.basename(p));
+      }
+    }
+
+    axios.post(`${mlUrl}/process`, formProcess, { timeout: 30000 })
       .then(async (mlRes) => {
         const mlData = mlRes.data || {};
         const updatedMeta = { ...metadata, ...mlData };
@@ -369,7 +346,7 @@ router.post('/upload', authenticate, upload.array('files'), async (req: AuthRequ
         console.error('ML processing background notification:', err.message);
       });
 
-    res.status(201).json({ study });
+    res.status(201).json({ study, guest_session_id: guestSessionId });
   } catch (err: any) {
     console.error('Upload error:', err.message);
     res.status(500).json({ error: 'Upload processing failed. Please check file format.' });
@@ -377,10 +354,11 @@ router.post('/upload', authenticate, upload.array('files'), async (req: AuthRequ
 });
 
 // Run prediction on study
-router.post('/:id/predict', authenticate, async (req: AuthRequest, res: Response) => {
+router.post('/:id/predict', optionalAuthenticate, async (req: AuthRequest, res: Response) => {
   const { model_type = 'quantum' } = req.body;
   try {
-    const studyResult = await pool.query('SELECT * FROM studies WHERE id = $1 AND user_id = $2', [req.params.id, req.user!.id]);
+    const ownership = getStudyOwnershipCondition(req, 'studies', 2);
+    const studyResult = await pool.query(`SELECT * FROM studies WHERE id = $1 AND ${ownership.sql}`, [req.params.id, ...ownership.params]);
     if (studyResult.rows.length === 0) { res.status(404).json({ error: 'Study not found' }); return; }
     const study = studyResult.rows[0];
 
@@ -391,12 +369,21 @@ router.post('/:id/predict', authenticate, async (req: AuthRequest, res: Response
     } catch { filePaths = []; }
 
     const mlUrl = process.env.ML_SERVICE_URL || 'http://localhost:8000';
-    const mlRes = await axios.post(`${mlUrl}/predict`, {
-      study_id: study.id,
-      file_paths: filePaths,
-      model_type,
-      mode: study.mode,
-    }, { timeout: 120000 });
+    
+    const formPredict = new FormData();
+    formPredict.append('study_id', study.id);
+    formPredict.append('model_type', model_type);
+    formPredict.append('mode', study.mode);
+    for (const p of filePaths) {
+      if (fs.existsSync(p)) {
+        const fileBytes = fs.readFileSync(p);
+        const hash = crypto.createHash('sha256').update(fileBytes).digest('hex');
+        console.log(`BACKEND RECEIVED HASH (predict, ${path.basename(p)}): ${hash}`);
+        formPredict.append('files', new Blob([fileBytes], { type: 'application/octet-stream' }), path.basename(p));
+      }
+    }
+
+    const mlRes = await axios.post(`${mlUrl}/predict`, formPredict, { timeout: 120000 });
 
     const mlData = mlRes.data;
 
